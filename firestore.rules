@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isCollaboratorOrAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'collaborator'];
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // users
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // events
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isCollaboratorOrAdmin();
+      allow update: if isCollaboratorOrAdmin() &&
+        (resource.data.organizerUid == request.auth.uid || isAdmin());
+      allow delete: if isAdmin() ||
+        (isCollaboratorOrAdmin() && resource.data.organizerUid == request.auth.uid);
+    }
+
+    // event_collaborators
+    match /event_collaborators/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isCollaboratorOrAdmin();
+    }
+
+    // event_participations
+    match /event_participations/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'attending';
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // mail (Trigger Email Extension)
+    match /mail/{mailId} {
+      allow read: if false;
+      allow create: if false;
+    }
+
+    // email_templates
+    match /email_templates/{templateId} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
