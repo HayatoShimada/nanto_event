@@ -41,6 +41,29 @@ export interface Event {
   updatedAt: Timestamp;
 }
 
+// Firestore news コレクション
+export interface News {
+  id: string;
+  title: string;
+  content: string;
+  publishedAt: Timestamp;
+  thumbnailURL: string | null;
+  authorId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Firestore teams コレクション
+export interface Team {
+  id: string;
+  name: string;
+  description: string;
+  members: string[]; // User IDs
+  imageURL: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // Firestore event_collaborators コレクション
 export interface EventCollaborator {
   id: string;

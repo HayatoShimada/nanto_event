@@ -1,80 +1,28 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-noto-sans-jp);
-  --color-primary: #1a1a1a;
-  --color-primary-dark: #000000;
-  --color-accent: #2563eb;
-  --color-accent-dark: #1d4ed8;
-  --color-surface: #fafafa;
-  --color-muted: #737373;
+@theme {
+  --color-main: #F280BF;
+  --color-sub: #F2B3DC;
+  --color-accent: #BCF2BB;
+  --color-bg-main: #BFBFBF;
+  --color-bg-sub: #D3F2CE;
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+
+  --font-sans: var(--font-m-plus-2), "Noto Sans JP", sans-serif;
 }
 
-/* Base */
 body {
-  font-family: var(--font-sans), sans-serif;
-  color: var(--color-primary);
-  letter-spacing: 0.02em;
-  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
 }
 
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
+@utility hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
-/* Selection */
-::selection {
-  background-color: #1a1a1a;
-  color: #ffffff;
-}
-
-/* Links & buttons — global transition */
-a,
-button {
-  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease,
-    box-shadow 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
-}
-
-/* Section dividers */
-section + section {
-  border-top: 1px solid #e5e5e5;
-}
-
-/* Card hover lift */
-.card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-}
-
-/* Fade-in animation for content sections */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
+  &::-webkit-scrollbar {
+    display: none;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-/* Typography refinements */
-h1,
-h2,
-h3,
-h4 {
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-}
-
-/* Tiptap editor content styling */
-.ProseMirror {
-  outline: none;
 }

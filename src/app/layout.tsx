@@ -1,29 +1,31 @@
-import type { Metadata } from "next";
-import { Noto_Sans_JP } from "next/font/google";
-import { AuthProvider } from "@/contexts/AuthContext";
-import "./globals.css";
+import './globals.css';
+import type { Metadata } from 'next';
+import { M_PLUS_2 } from 'next/font/google';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const mPlus2 = M_PLUS_2({
+    subsets: ['latin'],
+    display: 'swap',
+    variable: '--font-m-plus-2',
 });
 
 export const metadata: Metadata = {
-  title: "南砺市イベントページ",
-  description: "南砺市のイベント情報を一元管理するプラットフォーム",
+    title: 'NANTS - 南砺市イベント',
+    description: '南砺市を好きになるコミュニティーゾーン',
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="ja">
-      <body className={`${notoSansJP.variable} font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
-      </body>
-    </html>
-  );
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <html lang="ja">
+            <body className={`${mPlus2.variable} bg-bg-main text-text-primary h-screen w-screen overflow-hidden antialiased`}>
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
+            </body>
+        </html>
+    );
 }
