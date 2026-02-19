@@ -61,3 +61,22 @@ export async function deleteUserAvatar(uid: string): Promise<void> {
   const list = await listAll(folderRef);
   await Promise.all(list.items.map((item) => deleteObject(item)));
 }
+
+// ----- ニュースサムネイル画像 -----
+
+export async function uploadNewsThumbnail(
+  newsId: string,
+  file: File
+): Promise<string> {
+  validateFile(file);
+  const ext = getExtension(file);
+  const storageRef = ref(storage, `news/${newsId}/thumbnail.${ext}`);
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  return getDownloadURL(storageRef);
+}
+
+export async function deleteNewsThumbnail(newsId: string): Promise<void> {
+  const folderRef = ref(storage, `news/${newsId}`);
+  const list = await listAll(folderRef);
+  await Promise.all(list.items.map((item) => deleteObject(item)));
+}

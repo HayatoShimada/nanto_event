@@ -18,6 +18,7 @@ import type {
   UserProfile,
   EventCollaborator,
   EventParticipation,
+  News,
 } from "@/types";
 
 // ----- イベント CRUD -----
@@ -69,6 +70,50 @@ export async function updateEvent(
 
 export async function deleteEvent(eventId: string): Promise<void> {
   await deleteDoc(doc(db, "events", eventId));
+}
+
+// ----- ニュース CRUD -----
+
+export async function getNewsList(limit = 10): Promise<News[]> {
+  const q = query(
+    collection(db, "news"),
+    orderBy("publishedAt", "desc"),
+    firestoreLimit(limit)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as News);
+}
+
+export async function getNews(newsId: string): Promise<News | null> {
+  const snap = await getDoc(doc(db, "news", newsId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as News;
+}
+
+export async function createNews(
+  data: Omit<News, "id" | "createdAt" | "updatedAt">
+): Promise<string> {
+  const now = Timestamp.now();
+  const ref = await addDoc(collection(db, "news"), {
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function updateNews(
+  newsId: string,
+  data: Partial<News>
+): Promise<void> {
+  await updateDoc(doc(db, "news", newsId), {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function deleteNews(newsId: string): Promise<void> {
+  await deleteDoc(doc(db, "news", newsId));
 }
 
 // ----- ユーザー -----

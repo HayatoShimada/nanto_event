@@ -21,6 +21,8 @@ export interface UserProfile {
   postalcode: string;
   address: string;
   photoURL: string | null;
+  snsAccounts?: string[]; // 最大3つまで
+  noteUrl?: string; // RSS取得用
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

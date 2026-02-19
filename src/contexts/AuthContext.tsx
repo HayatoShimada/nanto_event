@@ -14,8 +14,9 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from "firebase/firestore"; // timestamp type update needed?
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/config";
+import { createUserProfile } from "@/lib/firebase/auth";
 import type { UserProfile } from "@/types";
 
 interface AuthContextValue {
@@ -89,19 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!userSnap.exists()) {
         // Create new profile
-        const newProfile = {
-          uid: user.uid,
-          role: "general",
+        await createUserProfile(user.uid, {
           username: user.displayName || "User",
           mail: user.email || "",
-          postalcode: "",
-          address: "",
-          photoURL: user.photoURL || null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        // @ts-ignore: Timestamp type mismatch usually happens with serverTimestamp() vs Timestamp
-        await setDoc(userRef, newProfile);
+          photoURL: user.photoURL,
+        });
       }
     } catch (error) {
       console.error("Login failed:", error);

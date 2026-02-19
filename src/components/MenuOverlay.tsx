@@ -29,11 +29,11 @@ export default function MenuOverlay({ isOpen, onClose }: MenuOverlayProps) {
     return (
         <div
             className={`fixed inset-0 z-[60] bg-white/95 backdrop-blur-md transition-opacity duration-300 flex flex-col justify-center items-center ${isOpen ? "opacity-100" : "opacity-0"
-                }`}
+                } pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]`}
         >
             <button
                 onClick={onClose}
-                className="absolute top-6 right-6 w-12 h-12 flex items-center justify-center border-2 border-text-primary rounded-full hover:bg-gray-100 transition-colors"
+                className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] right-6 w-12 h-12 flex items-center justify-center border-2 border-text-primary rounded-full hover:bg-gray-100 transition-colors"
             >
                 <span className="text-2xl font-bold">×</span>
             </button>

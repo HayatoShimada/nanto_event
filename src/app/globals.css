@@ -26,3 +26,13 @@ body {
     display: none;
   }
 }
+
+@keyframes scroll-down {
+  0% { transform: translateY(0); opacity: 0.3; }
+  50% { transform: translateY(10px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.3; }
+}
+
+.animate-scroll-down {
+  animation: scroll-down 2s infinite ease-in-out;
+}

@@ -4,15 +4,109 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import MenuOverlay from '@/components/MenuOverlay';
-import { useState } from 'react';
+import VerticalNav from '@/components/VerticalNav';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { format } from 'date-fns';
+
+interface RssItem {
+  title: string;
+  pubDate: string;
+  link: string;
+  thumbnail: string;
+  description: string;
+  author: string;
+}
 
 export default function Home() {
     const { user, logout } = useAuth();
+    const [newsItems, setNewsItems] = useState<RssItem[]>([]);
+    const [loadingNews, setLoadingNews] = useState(true);
+
+    useEffect(() => {
+        const fetchNoteRss = async () => {
+            try {
+                // noteUrlを持つユーザーを取得 (とりあえず簡易的に)
+                // 本来はインデックスが必要: where("noteUrl", "!=", "")
+                // ここでは全件取得してJSで絞るか、admin/collaboratorに限定する
+                // Issue #1により全員発信者のため、とりあえず全usersからnoteUrlがあるものを探すのはコスト高。
+                // 暫定措置: "role" が "admin" または "organizer" のユーザー、あるいは特定コレクション
+                // 今回は「noteUrlを持つユーザー」をクエリで取れる範囲で取る（インデックスがないとエラーになる可能性があるがtry）
+                
+                const q = query(collection(db, "users"), where("noteUrl", "!=", null), limit(10));
+                // Note: Firestoreでは "!=" null は使えない、orderBy("noteUrl")が必要。
+                // 代わりにクライアント側でフィルタするか、運用でカバー。
+                // ここではデモとして、特定ユーザー(自分など)のRSSを表示する形にするため、
+                // ログインユーザーのRSSを表示する...のではなく、"みんなのニュース"なので、
+                // 特定の運営アカウントのnoteUrlをハードコードまたはConfig取得が安全だが、
+                // 要望は「userが...掲載している場合」なので、動的に取得したい。
+                
+                // Firestoreの制約を回避するため、"updatedAt" desc で最新ユーザー20件を取得し、その中でnoteUrlがあるものを探す戦略
+                // const usersSnap = await getDocs(query(collection(db, "users"), orderBy("updatedAt", "desc"), limit(20)));
+                // -> インデックス必要。
+                
+                // シンプルに: collection(db, "users") 全件取得はNG。
+                // "users" に "hasNoteUrl" フラグを持たせるのがベストだが未実装。
+                // 今は仮に、getDocs(collection(db, "users")) で20件だけ取ってフィルタする（開発環境ならOK）。
+                
+                const usersSnap = await getDocs(query(collection(db, "users"), limit(20)));
+                const noteUrls = usersSnap.docs
+                    .map(d => d.data().noteUrl)
+                    .filter(url => url && url.includes("note.com"));
+
+                if (noteUrls.length === 0) {
+                    setNewsItems([]);
+                    setLoadingNews(false);
+                    return;
+                }
+
+                // RSS取得 (rss2json使用)
+                // noteのRSS URL形式: https://note.com/{id}/rss
+                const promises = noteUrls.map(async (url: string) => {
+                    const rssUrl = url.endsWith("/rss") ? url : `${url.replace(/\/$/, '')}/rss`;
+                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+                    try {
+                        const res = await fetch(apiUrl);
+                        const data = await res.json();
+                        if (data.status === 'ok') {
+                            return data.items.map((item: any) => ({
+                                title: item.title,
+                                pubDate: item.pubDate,
+                                link: item.link,
+                                thumbnail: item.thumbnail,
+                                description: item.description,
+                                author: data.feed.title // noteのユーザー名
+                            }));
+                        }
+                        return [];
+                    } catch (e) {
+                        console.error("RSS Fetch Error:", e);
+                        return [];
+                    }
+                });
+
+                const results = await Promise.all(promises);
+                const allItems = results.flat().sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
+                setNewsItems(allItems.slice(0, 5)); // 最新5件
+
+            } catch (error) {
+                console.error("News fetch error:", error);
+            } finally {
+                setLoadingNews(false);
+            }
+        };
+
+        fetchNoteRss();
+    }, []);
 
     return (
-        <div className="flex h-screen w-full bg-bg-main overflow-hidden font-sans flex-col md:flex-row">
+        <div className="flex h-dvh w-full bg-bg-main overflow-hidden font-sans flex-col md:flex-row pb-[env(safe-area-inset-bottom)]">
             {/* Mobile Header */}
             <Header />
+
+            {/* Vertical Dot Navigation (Mobile Only) */}
+            <VerticalNav />
 
             {/* Sidebar - Left Stick (Desktop Only) */}
             <aside className="hidden md:flex w-48 bg-bg-sub h-full flex-col p-4 shrink-0 border-r-2 border-text-primary z-50 shadow-xl relative">
@@ -64,25 +158,37 @@ export default function Home() {
             {/* Main Content Area - Vertical Scroll with Snap */}
             <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory hide-scrollbar pt-0 pb-0 md:pt-0 md:pb-0">
 
-                {/* Section: ALL */}
-                <Section id="all" title="ALL">
-                    <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
-                        <WelcomeCard />
-                        {[1, 2, 3].map(i => <EventCard key={`all-${i}`} index={i} category="RECOMMEND" />)}
-                        <ViewAllCard />
+                {/* Section: ALL & CONCEPT */}
+                <Section id="all" title="" showPrevHint={false} showNextHint={true}>
+                    <div className="flex flex-col md:flex-row gap-8 items-center h-full px-4 md:px-12 pb-12 pt-4 box-border w-full">
+                        <ConceptSection />
                     </div>
                 </Section>
 
                 {/* Section: NEWS */}
-                <Section id="news" title="NEWS">
+                <Section id="news" title="NEWS" showPrevHint={true} showNextHint={true}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
-                        {[1, 2, 3, 4, 5].map(i => <NewsCard key={`news-${i}`} index={i} />)}
+                        {loadingNews ? (
+                             [1, 2, 3].map(i => (
+                                <div key={i} className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                                    <div className="h-1/3 bg-gray-200 mb-4"></div>
+                                    <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
+                                    <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
+                                </div>
+                             ))
+                        ) : newsItems.length > 0 ? (
+                            newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} index={i} />)
+                        ) : (
+                            <div className="min-w-[85vw] md:min-w-[35vh] flex items-center justify-center bg-white border-2 border-text-primary p-8">
+                                <p className="text-text-secondary font-bold">No News Available</p>
+                            </div>
+                        )}
                         <ViewAllCard />
                     </div>
                 </Section>
 
                 {/* Section: EVENTS */}
-                <Section id="events" title="EVENTS">
+                <Section id="events" title="EVENTS" showPrevHint={true} showNextHint={true}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
                         {[1, 2, 3, 4, 5].map(i => <EventCard key={`event-${i}`} index={i} category="EVENT" />)}
                         <ViewAllCard />
@@ -90,7 +196,7 @@ export default function Home() {
                 </Section>
 
                 {/* Section: TEAMS */}
-                <Section id="teams" title="TEAMS">
+                <Section id="teams" title="TEAMS" showPrevHint={true} showNextHint={false}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
                         {[1, 2, 3, 4, 5].map(i => <TeamCard key={`team-${i}`} index={i} />)}
                         <ViewAllCard />
@@ -102,9 +208,16 @@ export default function Home() {
     );
 }
 
-function Section({ id, title, children }: { id: string, title: string, children: React.ReactNode }) {
+function Section({ id, title, children, showNextHint = true, showPrevHint = false }: { id: string, title: string, children: React.ReactNode, showNextHint?: boolean, showPrevHint?: boolean }) {
     return (
-        <section id={id} className="w-full h-screen snap-start flex flex-col justify-start md:justify-center pt-16 pb-2 md:py-4 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
+        <section id={id} className="w-full h-dvh snap-start flex flex-col justify-start md:justify-center pt-[calc(4rem+env(safe-area-inset-top))] pb-2 md:py-4 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
+            {/* Previous Hint */}
+            {showPrevHint && (
+                <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 flex flex-col items-center opacity-40 md:hidden z-20">
+                    <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+            )}
+
             <div className="px-4 md:px-12 mb-1 md:mb-4 shrink-0">
                 <h2 className="text-3xl md:text-4xl font-bold text-main tracking-widest drop-shadow-sm flex items-center gap-2 md:gap-4">
                     {title}
@@ -114,6 +227,14 @@ function Section({ id, title, children }: { id: string, title: string, children:
             <div className="flex-1 overflow-x-auto hide-scrollbar scroll-smooth w-full flex items-start md:items-center snap-x snap-mandatory">
                 {children}
             </div>
+
+            {/* Next Hint */}
+            {showNextHint && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-70 md:hidden z-20 animate-scroll-down">
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">SCROLL</span>
+                    <svg className="w-5 h-5 text-main" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+            )}
         </section>
     );
 }
@@ -130,25 +251,58 @@ function NavItem({ href, label, active = false }: { href: string; label: string;
     );
 }
 
-function WelcomeCard() {
+function ConceptSection() {
     return (
-        <div className="min-w-[85vw] md:min-w-[40vh] w-[85vw] md:w-auto h-[80%] md:h-[65%] md:aspect-[4/5] snap-center bg-white p-6 md:p-8 flex flex-col justify-center border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative overflow-hidden group shrink-0">
-            <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-main/10 -mr-8 -mt-8 transition-all group-hover:bg-main/20"></div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-main relative z-10">Welcome to<br />NANTS</h2>
-            <p className="text-base md:text-lg text-text-secondary leading-relaxed relative z-10 flex-1 overflow-y-auto">
-                南砺市を好きになるコミュニティーゾーン。<br />
-                新しい出会いと体験があなたを待っています。
-            </p>
-            <button className="mt-4 px-6 py-3 bg-white text-text-primary border-2 border-text-primary font-bold shadow-[2px_2px_0_0_rgba(242,128,191,1)] md:shadow-[4px_4px_0_0_rgba(242,128,191,1)] hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_0_rgba(242,128,191,1)] md:hover:shadow-[2px_2px_0_0_rgba(242,128,191,1)] transition-all w-fit cursor-pointer active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shrink-0 text-sm md:text-base">
-                EXPLORE
-            </button>
+        <div className="w-full h-full flex flex-col md:flex-row gap-8 items-center justify-center snap-center shrink-0">
+            {/* Main Concept Card */}
+            <div className="w-full md:w-1/2 h-auto md:h-full flex flex-col justify-center gap-6 p-6 md:p-10 bg-white border-4 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-main/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-main/10 transition-colors duration-700"></div>
+                
+                <div className="relative z-10">
+                    <span className="text-main font-bold tracking-[0.2em] text-sm md:text-base border-b-2 border-main pb-1 inline-block mb-4">NANTS CONCEPT</span>
+                    <h2 className="text-3xl md:text-5xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif">
+                        楽しむ &lt; <span className="text-main underline decoration-4 decoration-main/30 underline-offset-4">楽しませる</span>
+                    </h2>
+                    
+                    <div className="space-y-4 text-text-secondary font-medium text-sm md:text-base leading-loose">
+                        <p>
+                            自分だけが楽しむのではなく、<br className="hidden md:inline"/>
+                            <strong className="text-text-primary bg-main/10 px-1">誰かを楽しませる</strong> こと。
+                        </p>
+                        <p>
+                            イベントに参加するだけで、<br className="hidden md:inline"/>
+                            運営している人を <strong className="text-text-primary bg-main/10 px-1">応援</strong> できること。
+                        </p>
+                        <p>
+                            そして <strong className="text-text-primary bg-main/10 px-1">オープン</strong> で <strong className="text-text-primary bg-main/10 px-1">自由</strong> で、<br className="hidden md:inline"/>
+                            <strong className="text-text-primary bg-main/10 px-1">性善説</strong> で運営されること。
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-8 relative z-10">
+                     <Link href="/about" className="inline-flex items-center gap-2 px-8 py-4 bg-text-primary text-white font-bold tracking-widest hover:bg-main transition-colors shadow-[4px_4px_0_0_rgba(200,200,200,1)] hover:shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none">
+                        READ MORE
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                     </Link>
+                </div>
+            </div>
+
+            {/* Sub Visual / Quick Access */}
+            <div className="hidden md:flex flex-col w-1/3 h-full gap-4 box-border pb-10 pt-20">
+                 <div className="flex-1 bg-main/10 border-2 border-dashed border-main/30 rounded-lg flex items-center justify-center p-8 text-center">
+                    <p className="text-text-primary font-bold opacity-50">
+                        COMMUNITY VISUAL<br/>PLACEHOLDER
+                    </p>
+                 </div>
+            </div>
         </div>
     );
 }
 
 function EventCard({ index, category = "FESTIVAL" }: { index: number, category?: string }) {
     return (
-        <article className="min-w-[75vw] md:min-w-[30vh] w-[75vw] md:w-auto h-[80%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
+        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
             <div className="h-[40%] md:h-[45%] bg-bg-sub relative border-b-2 border-text-primary overflow-hidden shrink-0">
                 <div className="absolute inset-0 flex items-center justify-center text-main/30 font-bold text-3xl group-hover:scale-110 transition-transform duration-500">EVENT</div>
                 <div className="absolute top-4 left-4 bg-white px-3 py-1 border border-text-primary text-xs font-bold text-main shadow-[2px_2px_0_0_rgba(51,51,51,1)] z-10">
@@ -168,29 +322,44 @@ function EventCard({ index, category = "FESTIVAL" }: { index: number, category?:
                     </p>
                 </div>
                 <div className="pt-3 border-t-2 border-gray-100 mt-2 shrink-0">
-                    <button className="text-xs font-bold text-main border-b-2 border-transparent hover:border-main cursor-pointer">JOIN</button>
+                    <button className="text-sm font-bold text-main border-2 border-main px-4 py-2 hover:bg-main hover:text-white transition-all w-full cursor-pointer active:scale-95">JOIN</button>
                 </div>
             </div>
         </article>
     );
 }
 
-function NewsCard({ index }: { index: number }) {
+function NewsCard({ item, index }: { item: RssItem, index: number }) {
+    // 日付フォーマット
+    const dateStr = format(new Date(item.pubDate), 'yyyy.MM.dd');
+    
+    // HTMLタグ除去（簡易的）
+    const plainDesc = item.description.replace(/<[^>]+>/g, '').substring(0, 80) + "...";
+
     return (
-        <article className="min-w-[80vw] md:min-w-[35vh] w-[80vw] md:w-auto h-[80%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
-            <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl">
-                NEWS
+        <article className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
+            <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group">
+                {item.thumbnail ? (
+                    <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+                ) : (
+                    "NEWS"
+                )}
+                <div className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-text-primary text-blue-900 truncate max-w-[90%]">
+                    {item.author}
+                </div>
             </div>
             <div className="p-4 md:p-5 flex-1 flex flex-col overflow-y-auto">
-                <span className="text-xs font-bold text-blue-500 mb-2 shrink-0">2026.02.{20 - index}</span>
-                <h3 className="text-base font-bold mb-2 text-text-primary shrink-0">
-                    地域活性化プロジェクト「NANTS」始動のお知らせ
+                <span className="text-xs font-bold text-blue-500 mb-2 shrink-0">{dateStr}</span>
+                <h3 className="text-base font-bold mb-2 text-text-primary shrink-0 leading-tight">
+                    {item.title}
                 </h3>
-                <p className="text-xs text-text-secondary leading-relaxed flex-1">
-                    南砺市の新しいコミュニティプラットフォームがオープンしました。最新のイベント情報やチーム活動をチェックして、地域とのつながりを深めましょう。
+                <p className="text-xs text-text-secondary leading-relaxed flex-1 overflow-hidden">
+                    {plainDesc}
                 </p>
                 <div className="mt-auto pt-3 text-right shrink-0">
-                    <span className="text-xs font-bold text-text-secondary border-b border-text-secondary hover:text-main hover:border-main cursor-pointer">READ MORE</span>
+                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-text-secondary border-2 border-text-secondary px-3 py-1.5 hover:text-main hover:border-main cursor-pointer inline-block active:scale-95 transition-colors">
+                        READ NOTE
+                    </a>
                 </div>
             </div>
         </article>
@@ -199,7 +368,7 @@ function NewsCard({ index }: { index: number }) {
 
 function TeamCard({ index }: { index: number }) {
     return (
-        <article className="min-w-[75vw] md:min-w-[30vh] w-[75vw] md:w-auto h-[80%] md:h-[50%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
+        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[50%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
             <div className="h-[25%] md:h-[30%] bg-green-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-green-200 font-bold text-2xl">
                 TEAM
             </div>

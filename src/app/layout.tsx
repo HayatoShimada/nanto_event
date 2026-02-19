@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="ja">
-            <body className={`${mPlus2.variable} bg-bg-main text-text-primary h-screen w-screen overflow-hidden antialiased`}>
+            <body className={`${mPlus2.variable} bg-bg-main text-text-primary h-dvh w-screen overflow-hidden antialiased`}>
                 <AuthProvider>
                     {children}
                 </AuthProvider>
