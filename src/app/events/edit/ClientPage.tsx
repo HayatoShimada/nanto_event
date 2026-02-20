@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getEvent, updateEvent, deleteEvent } from "@/lib/firebase/firestore";
 import { uploadEventImage, deleteEventImage } from "@/lib/firebase/storage";
 import Header from "@/components/Header";
@@ -20,11 +20,15 @@ const schema = z.object({
   location: z.string().min(1, "場所は必須です"),
   categories: z.string().min(1, "カテゴリは少なくとも1つ必要です"),
   description: z.string().optional(),
+  recruitmentUrl: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
-export default function ClientPage({ id }: { id: string }) {
+export default function ClientPage() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageURL, setCurrentImageURL] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,9 +48,9 @@ export default function ClientPage({ id }: { id: string }) {
 
   useEffect(() => {
     async function loadEvent() {
-      // id is from props
+      if (!id) return;
       const eventData = await getEvent(id);
-      
+
       if (!eventData) {
         alert("Event not found");
         router.push("/mypage");
@@ -55,17 +59,18 @@ export default function ClientPage({ id }: { id: string }) {
 
       // Check ownership
       if (user && eventData.organizerUid !== user.uid) {
-         // Allow admin bypass or show error
+        // Allow admin bypass or show error
       }
-      
+
       setValue("name", eventData.name);
       setValue("startDate", formatDateForInput(eventData.startDate));
       setValue("finishDate", formatDateForInput(eventData.finishDate));
       setValue("location", eventData.location);
       setValue("categories", eventData.categories.join(", "));
       setValue("description", eventData.description);
+      setValue("recruitmentUrl", eventData.recruitmentUrl || "");
       setCurrentImageURL(eventData.imageURL);
-      
+
       setLoading(false);
     }
     loadEvent();
@@ -90,20 +95,22 @@ export default function ClientPage({ id }: { id: string }) {
 
       if (imageFile) {
         // Upload new image
-        imageURL = await uploadEventImage(id, imageFile);
+        imageURL = await uploadEventImage(id as string, imageFile);
       }
 
-      await updateEvent(id, {
+      await updateEvent(id as string, {
         name: data.name,
         startDate: Timestamp.fromDate(new Date(data.startDate)),
         finishDate: Timestamp.fromDate(new Date(data.finishDate)),
         location: data.location,
         categories: data.categories.split(",").map((s) => s.trim()) as any[],
         description: data.description || "",
+        recruitmentUrl: data.recruitmentUrl || "",
         imageURL: imageURL,
       });
 
-      router.push(`/events/${id}`);
+      alert("イベントを更新しました");
+      router.push("/mypage");
     } catch (error) {
       console.error("Failed to update event:", error);
       alert("イベント更新に失敗しました");
@@ -113,48 +120,48 @@ export default function ClientPage({ id }: { id: string }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("本当にこのイベントを削除しますか？この操作は取り消せません。")) return;
-    
+    if (!id || !confirm("本当にこのイベントを削除しますか？この操作は取り消せません。")) return;
+
     setIsSubmitting(true);
     try {
-        if (currentImageURL) {
-            await deleteEventImage(id);
-        }
-        await deleteEvent(id);
-        router.push("/mypage");
+      if (currentImageURL) {
+        await deleteEventImage(id);
+      }
+      await deleteEvent(id);
+      router.push("/mypage");
     } catch (error) {
-        console.error("Failed to delete event:", error);
-        alert("削除に失敗しました");
-        setIsSubmitting(false);
+      console.error("Failed to delete event:", error);
+      alert("削除に失敗しました");
+      setIsSubmitting(false);
     }
   };
 
   if (loading) {
-      return (
-          <div className="h-dvh w-full flex items-center justify-center bg-bg-main">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-main" />
-          </div>
-      );
+    return (
+      <div className="h-dvh w-full flex items-center justify-center bg-bg-main">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-main" />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-dvh bg-bg-main text-text-primary font-sans">
       <Header />
-      
+
       <main className="max-w-3xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
         <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Edit Event</h1>
-            <button 
-                onClick={handleDelete}
-                disabled={isSubmitting}
-                className="text-red-500 font-bold border-2 border-red-500 px-4 py-2 hover:bg-red-50 transition-colors text-sm"
-            >
-                DELETE EVENT
-            </button>
+          <h1 className="text-2xl font-bold">Edit Event</h1>
+          <button
+            onClick={handleDelete}
+            disabled={isSubmitting}
+            className="text-red-500 font-bold border-2 border-red-500 px-4 py-2 hover:bg-red-50 transition-colors text-sm"
+          >
+            DELETE EVENT
+          </button>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)]">
-          
+
           {/* Event Name */}
           <div>
             <label className="block text-sm font-bold mb-1">EVENT NAME</label>
@@ -210,24 +217,35 @@ export default function ClientPage({ id }: { id: string }) {
             {errors.categories && <p className="text-red-500 text-xs mt-1">{errors.categories.message}</p>}
           </div>
 
+          {/* Recruitment URL */}
+          <div>
+            <label className="block text-sm font-bold mb-1">RECRUITMENT URL (Optional)</label>
+            <input
+              {...register("recruitmentUrl")}
+              type="text"
+              className="w-full border-2 border-text-primary p-2 rounded-sm focus:ring-2 focus:ring-main focus:outline-none"
+              placeholder="Ex: https://peatix.com/..."
+            />
+          </div>
+
           {/* Main Image */}
           <div>
-             <label className="block text-sm font-bold mb-1">MAIN IMAGE</label>
-             {currentImageURL && (
-                 <div className="mb-2 relative w-full h-48 bg-gray-100 border border-text-primary">
-                     <img src={currentImageURL} alt="Current" className="w-full h-full object-contain" />
-                 </div>
-             )}
-             <input
-               type="file"
-               accept="image/*"
-               onChange={(e) => {
-                 if (e.target.files?.[0]) {
-                   setImageFile(e.target.files[0]);
-                 }
-               }}
-               className="w-full border-2 border-text-primary p-2 rounded-sm bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-main file:text-white hover:file:bg-main/80"
-             />
+            <label className="block text-sm font-bold mb-1">MAIN IMAGE</label>
+            {currentImageURL && (
+              <div className="mb-2 relative w-full h-48 bg-gray-100 border border-text-primary">
+                <img src={currentImageURL} alt="Current" className="w-full h-full object-contain" />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  setImageFile(e.target.files[0]);
+                }
+              }}
+              className="w-full border-2 border-text-primary p-2 rounded-sm bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-main file:text-white hover:file:bg-main/80"
+            />
           </div>
 
           {/* Description (Rich Text) */}
@@ -237,9 +255,9 @@ export default function ClientPage({ id }: { id: string }) {
               name="description"
               control={control}
               render={({ field }) => (
-                <Editor 
-                  content={field.value} 
-                  onChange={field.onChange} 
+                <Editor
+                  content={field.value}
+                  onChange={field.onChange}
                 />
               )}
             />

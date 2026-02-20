@@ -27,6 +27,7 @@ export default function Editor({ content = "", onChange, editable = true }: Edit
     ],
     content,
     editable,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
     },

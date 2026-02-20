@@ -6,23 +6,27 @@ import Header from '@/components/Header';
 import MenuOverlay from '@/components/MenuOverlay';
 import VerticalNav from '@/components/VerticalNav';
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { format } from 'date-fns';
+import type { Event as EventType } from '@/types';
+import { incrementParticipationClick } from '@/lib/firebase/firestore';
 
 interface RssItem {
-  title: string;
-  pubDate: string;
-  link: string;
-  thumbnail: string;
-  description: string;
-  author: string;
+    title: string;
+    pubDate: string;
+    link: string;
+    thumbnail: string;
+    description: string;
+    author: string;
 }
 
 export default function Home() {
     const { user, logout } = useAuth();
     const [newsItems, setNewsItems] = useState<RssItem[]>([]);
     const [loadingNews, setLoadingNews] = useState(true);
+    const [events, setEvents] = useState<EventType[]>([]);
+    const [loadingEvents, setLoadingEvents] = useState(true);
 
     useEffect(() => {
         const fetchNoteRss = async () => {
@@ -33,7 +37,7 @@ export default function Home() {
                 // Issue #1により全員発信者のため、とりあえず全usersからnoteUrlがあるものを探すのはコスト高。
                 // 暫定措置: "role" が "admin" または "organizer" のユーザー、あるいは特定コレクション
                 // 今回は「noteUrlを持つユーザー」をクエリで取れる範囲で取る（インデックスがないとエラーになる可能性があるがtry）
-                
+
                 const q = query(collection(db, "users"), where("noteUrl", "!=", null), limit(10));
                 // Note: Firestoreでは "!=" null は使えない、orderBy("noteUrl")が必要。
                 // 代わりにクライアント側でフィルタするか、運用でカバー。
@@ -41,15 +45,15 @@ export default function Home() {
                 // ログインユーザーのRSSを表示する...のではなく、"みんなのニュース"なので、
                 // 特定の運営アカウントのnoteUrlをハードコードまたはConfig取得が安全だが、
                 // 要望は「userが...掲載している場合」なので、動的に取得したい。
-                
+
                 // Firestoreの制約を回避するため、"updatedAt" desc で最新ユーザー20件を取得し、その中でnoteUrlがあるものを探す戦略
                 // const usersSnap = await getDocs(query(collection(db, "users"), orderBy("updatedAt", "desc"), limit(20)));
                 // -> インデックス必要。
-                
+
                 // シンプルに: collection(db, "users") 全件取得はNG。
                 // "users" に "hasNoteUrl" フラグを持たせるのがベストだが未実装。
                 // 今は仮に、getDocs(collection(db, "users")) で20件だけ取ってフィルタする（開発環境ならOK）。
-                
+
                 const usersSnap = await getDocs(query(collection(db, "users"), limit(20)));
                 const noteUrls = usersSnap.docs
                     .map(d => d.data().noteUrl)
@@ -97,7 +101,20 @@ export default function Home() {
             }
         };
 
+        const fetchEvents = async () => {
+            try {
+                const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(10)));
+                const fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
+                setEvents(fetchedEvents);
+            } catch (error) {
+                console.error("Failed to fetch events:", error);
+            } finally {
+                setLoadingEvents(false);
+            }
+        };
+
         fetchNoteRss();
+        fetchEvents();
     }, []);
 
     return (
@@ -169,13 +186,13 @@ export default function Home() {
                 <Section id="news" title="NEWS" showPrevHint={true} showNextHint={true}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
                         {loadingNews ? (
-                             [1, 2, 3].map(i => (
+                            [1, 2, 3].map(i => (
                                 <div key={i} className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
                                     <div className="h-1/3 bg-gray-200 mb-4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
                                 </div>
-                             ))
+                            ))
                         ) : newsItems.length > 0 ? (
                             newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} index={i} />)
                         ) : (
@@ -190,7 +207,21 @@ export default function Home() {
                 {/* Section: EVENTS */}
                 <Section id="events" title="EVENTS" showPrevHint={true} showNextHint={true}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
-                        {[1, 2, 3, 4, 5].map(i => <EventCard key={`event-${i}`} index={i} category="EVENT" />)}
+                        {loadingEvents ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                                    <div className="h-1/2 bg-gray-200 mb-4"></div>
+                                    <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
+                                    <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
+                                </div>
+                            ))
+                        ) : events.length > 0 ? (
+                            events.map((event, i) => <EventCard key={event.id || i} event={event} />)
+                        ) : (
+                            <div className="min-w-[80vw] md:min-w-[30vh] flex items-center justify-center bg-white border-2 border-text-primary p-8 text-center">
+                                <p className="text-text-secondary font-bold">No Events Available</p>
+                            </div>
+                        )}
                         <ViewAllCard />
                     </div>
                 </Section>
@@ -257,69 +288,89 @@ function ConceptSection() {
             {/* Main Concept Card */}
             <div className="w-full md:w-1/2 h-auto md:h-full flex flex-col justify-center gap-6 p-6 md:p-10 bg-white border-4 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-main/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-main/10 transition-colors duration-700"></div>
-                
+
                 <div className="relative z-10">
                     <span className="text-main font-bold tracking-[0.2em] text-sm md:text-base border-b-2 border-main pb-1 inline-block mb-4">NANTS CONCEPT</span>
                     <h2 className="text-3xl md:text-5xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif">
                         楽しむ &lt; <span className="text-main underline decoration-4 decoration-main/30 underline-offset-4">楽しませる</span>
                     </h2>
-                    
+
                     <div className="space-y-4 text-text-secondary font-medium text-sm md:text-base leading-loose">
                         <p>
-                            自分だけが楽しむのではなく、<br className="hidden md:inline"/>
+                            自分だけが楽しむのではなく、<br className="hidden md:inline" />
                             <strong className="text-text-primary bg-main/10 px-1">誰かを楽しませる</strong> こと。
                         </p>
                         <p>
-                            イベントに参加するだけで、<br className="hidden md:inline"/>
+                            イベントに参加するだけで、<br className="hidden md:inline" />
                             運営している人を <strong className="text-text-primary bg-main/10 px-1">応援</strong> できること。
                         </p>
                         <p>
-                            そして <strong className="text-text-primary bg-main/10 px-1">オープン</strong> で <strong className="text-text-primary bg-main/10 px-1">自由</strong> で、<br className="hidden md:inline"/>
+                            そして <strong className="text-text-primary bg-main/10 px-1">オープン</strong> で <strong className="text-text-primary bg-main/10 px-1">自由</strong> で、<br className="hidden md:inline" />
                             <strong className="text-text-primary bg-main/10 px-1">性善説</strong> で運営されること。
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-8 relative z-10">
-                     <Link href="/about" className="inline-flex items-center gap-2 px-8 py-4 bg-text-primary text-white font-bold tracking-widest hover:bg-main transition-colors shadow-[4px_4px_0_0_rgba(200,200,200,1)] hover:shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none">
+                    <Link href="/about" className="inline-flex items-center gap-2 px-8 py-4 bg-text-primary text-white font-bold tracking-widest hover:bg-main transition-colors shadow-[4px_4px_0_0_rgba(200,200,200,1)] hover:shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none">
                         READ MORE
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                     </Link>
+                    </Link>
                 </div>
             </div>
 
             {/* Sub Visual / Quick Access */}
             <div className="hidden md:flex flex-col w-1/3 h-full gap-4 box-border pb-10 pt-20">
-                 <div className="flex-1 bg-main/10 border-2 border-dashed border-main/30 rounded-lg flex items-center justify-center p-8 text-center">
+                <div className="flex-1 bg-main/10 border-2 border-dashed border-main/30 rounded-lg flex items-center justify-center p-8 text-center">
                     <p className="text-text-primary font-bold opacity-50">
-                        COMMUNITY VISUAL<br/>PLACEHOLDER
+                        COMMUNITY VISUAL<br />PLACEHOLDER
                     </p>
-                 </div>
+                </div>
             </div>
         </div>
     );
 }
 
-function EventCard({ index, category = "FESTIVAL" }: { index: number, category?: string }) {
+function EventCard({ event }: { event: EventType }) {
+    const handleJoin = async () => {
+        if (event.id) {
+            incrementParticipationClick(event.id).catch(console.error);
+        }
+        if (event.recruitmentUrl) {
+            window.open(event.recruitmentUrl, "_blank", "noopener,noreferrer");
+        } else {
+            alert("募集ページが設定されていません。");
+        }
+    };
+
     return (
-        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
+        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group" onClick={handleJoin}>
             <div className="h-[40%] md:h-[45%] bg-bg-sub relative border-b-2 border-text-primary overflow-hidden shrink-0">
-                <div className="absolute inset-0 flex items-center justify-center text-main/30 font-bold text-3xl group-hover:scale-110 transition-transform duration-500">EVENT</div>
-                <div className="absolute top-4 left-4 bg-white px-3 py-1 border border-text-primary text-xs font-bold text-main shadow-[2px_2px_0_0_rgba(51,51,51,1)] z-10">
-                    {category}
+                {event.imageURL ? (
+                    <img src={event.imageURL} alt={event.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-main/30 font-bold text-3xl group-hover:scale-110 transition-transform duration-500">NO IMAGE</div>
+                )}
+                <div className="absolute top-4 left-4 flex gap-1 flex-wrap">
+                    {event.categories?.map((cat, i) => (
+                        <span key={i} className="bg-white px-3 py-1 border border-text-primary text-xs font-bold text-main shadow-[2px_2px_0_0_rgba(51,51,51,1)] z-10">
+                            {cat}
+                        </span>
+                    ))}
                 </div>
             </div>
             <div className="p-4 md:p-5 flex-1 flex flex-col justify-between overflow-y-auto">
                 <div>
                     <div className="flex items-center gap-2 text-xs text-text-secondary mb-2">
-                        <span className="font-bold text-main">2026.03.{10 + index}</span>
+                        <span className="font-bold text-main">
+                            {event.startDate ? format(event.startDate.toDate(), "yyyy.MM.dd HH:mm") : ""}
+                        </span>
                     </div>
-                    <h3 className="text-base font-bold mb-2 text-text-primary hover:text-main transition-colors">
-                        第{index}回 南砺市クリエイティブフェスティバル
+                    <h3 className="text-base font-bold mb-2 text-text-primary group-hover:text-main transition-colors">
+                        {event.name}
                     </h3>
-                    <p className="text-xs text-text-secondary">
-                        伝統と技術が融合する祭典。地元の職人とクリエイターが競演します。
-                    </p>
+                    <div className="text-xs text-text-secondary truncate-multiline line-clamp-3 mb-2" dangerouslySetInnerHTML={{ __html: event.description || '' }}>
+                    </div>
                 </div>
                 <div className="pt-3 border-t-2 border-gray-100 mt-2 shrink-0">
                     <button className="text-sm font-bold text-main border-2 border-main px-4 py-2 hover:bg-main hover:text-white transition-all w-full cursor-pointer active:scale-95">JOIN</button>
@@ -332,37 +383,37 @@ function EventCard({ index, category = "FESTIVAL" }: { index: number, category?:
 function NewsCard({ item, index }: { item: RssItem, index: number }) {
     // 日付フォーマット
     const dateStr = format(new Date(item.pubDate), 'yyyy.MM.dd');
-    
+
     // HTMLタグ除去（簡易的）
     const plainDesc = item.description.replace(/<[^>]+>/g, '').substring(0, 80) + "...";
 
     return (
-        <article className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
-            <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group">
+        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group">
+            <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group-hover:opacity-90 transition-opacity">
                 {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
                 ) : (
                     "NEWS"
                 )}
-                <div className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-text-primary text-blue-900 truncate max-w-[90%]">
+                <div className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-text-primary text-blue-900 truncate max-w-[90%] z-10 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">
                     {item.author}
                 </div>
             </div>
             <div className="p-4 md:p-5 flex-1 flex flex-col overflow-y-auto">
                 <span className="text-xs font-bold text-blue-500 mb-2 shrink-0">{dateStr}</span>
-                <h3 className="text-base font-bold mb-2 text-text-primary shrink-0 leading-tight">
+                <h3 className="text-base font-bold mb-2 text-text-primary shrink-0 leading-tight group-hover:text-main transition-colors">
                     {item.title}
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed flex-1 overflow-hidden">
                     {plainDesc}
                 </p>
                 <div className="mt-auto pt-3 text-right shrink-0">
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-text-secondary border-2 border-text-secondary px-3 py-1.5 hover:text-main hover:border-main cursor-pointer inline-block active:scale-95 transition-colors">
+                    <span className="text-xs font-bold text-text-secondary border-2 border-text-secondary px-3 py-1.5 group-hover:text-white group-hover:bg-main group-hover:border-main inline-block active:scale-95 transition-all">
                         READ NOTE
-                    </a>
+                    </span>
                 </div>
             </div>
-        </article>
+        </a>
     );
 }
 

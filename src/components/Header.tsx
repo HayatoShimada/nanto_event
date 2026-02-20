@@ -34,6 +34,7 @@ export default function Header() {
                             <div className="w-full h-full bg-main/20 flex items-center justify-center text-main font-bold text-xs">
                                 {user.displayName ? user.displayName[0].toUpperCase() : "U"}
                             </div>
+
                         )}
                     </Link>
                 ) : (

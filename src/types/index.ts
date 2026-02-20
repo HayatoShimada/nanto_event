@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 
 // ユーザーロール
-export type UserRole = "general" | "admin" | "collaborator";
+export type UserRole = "general" | "auth";
 
 // イベントカテゴリ
 export type EventCategory =
@@ -39,6 +39,9 @@ export interface Event {
   finishDate: Timestamp;
   organizerUid: string;
   emailNotification: boolean;
+  recruitmentUrl?: string; // 外部募集用URL
+  pageViews?: number; // 閲覧数
+  participationClicks?: number; // 参加ボタンクリック数
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

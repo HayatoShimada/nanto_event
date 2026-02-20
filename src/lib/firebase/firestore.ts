@@ -11,6 +11,7 @@ import {
   orderBy,
   limit as firestoreLimit,
   Timestamp,
+  increment,
 } from "firebase/firestore";
 import { db } from "./config";
 import type {
@@ -46,16 +47,41 @@ export async function getUpcomingEvents(limit = 6): Promise<Event[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
 }
 
+export async function getOrganizedEvents(uid: string): Promise<Event[]> {
+  const q = query(
+    collection(db, "events"),
+    where("organizerUid", "==", uid),
+    orderBy("startDate", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
+}
+
 export async function createEvent(
-  data: Omit<Event, "id" | "createdAt" | "updatedAt">
+  data: Omit<Event, "id" | "createdAt" | "updatedAt" | "pageViews" | "participationClicks"> & { recruitmentUrl?: string }
 ): Promise<string> {
   const now = Timestamp.now();
   const ref = await addDoc(collection(db, "events"), {
     ...data,
+    recruitmentUrl: data.recruitmentUrl || "",
+    pageViews: 0,
+    participationClicks: 0,
     createdAt: now,
     updatedAt: now,
   });
   return ref.id;
+}
+
+export async function incrementEventPageView(eventId: string): Promise<void> {
+  await updateDoc(doc(db, "events", eventId), {
+    pageViews: increment(1)
+  });
+}
+
+export async function incrementParticipationClick(eventId: string): Promise<void> {
+  await updateDoc(doc(db, "events", eventId), {
+    participationClicks: increment(1)
+  });
 }
 
 export async function updateEvent(

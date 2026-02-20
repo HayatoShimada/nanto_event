@@ -48,7 +48,7 @@ export async function createUserProfile(
   const now = Timestamp.now();
   const profile: Omit<UserProfile, "uid"> & { uid: string } = {
     uid,
-    role: data.role ?? "general",
+    role: data.role ?? "auth",
     username: data.username,
     mail: data.mail,
     postalcode: data.postalcode ?? "",

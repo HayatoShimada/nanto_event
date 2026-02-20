@@ -17,8 +17,9 @@ const schema = z.object({
   startDate: z.string().min(1, "開始日時は必須です"),
   finishDate: z.string().min(1, "終了日時は必須です"),
   location: z.string().min(1, "場所は必須です"),
-  categories: z.string().min(1, "カテゴリは少なくとも1つ必要です"), 
+  categories: z.string().min(1, "カテゴリは少なくとも1つ必要です"),
   description: z.string().optional(),
+  recruitmentUrl: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -53,19 +54,21 @@ export default function CreateEventPage() {
         startDate: Timestamp.fromDate(new Date(data.startDate)),
         finishDate: Timestamp.fromDate(new Date(data.finishDate)),
         location: data.location,
-        categories: data.categories.split(",").map((s) => s.trim()) as any[], 
+        categories: data.categories.split(",").map((s) => s.trim()) as any[],
         description: data.description || "",
-        imageURL: null, 
+        recruitmentUrl: data.recruitmentUrl || "",
+        imageURL: null,
         organizerUid: user.uid,
-        emailNotification: false, 
+        emailNotification: false,
       });
 
       if (imageFile) {
         const imageURL = await uploadEventImage(eventId, imageFile);
         await updateEvent(eventId, { imageURL });
       }
-      
-      router.push(`/events/${eventId}`);
+
+      alert("イベントを作成しました");
+      router.push("/mypage");
     } catch (error) {
       console.error("Failed to create event:", error);
       alert("イベント作成に失敗しました");
@@ -77,12 +80,12 @@ export default function CreateEventPage() {
   return (
     <div className="min-h-dvh bg-bg-main text-text-primary font-sans">
       <Header />
-      
+
       <main className="max-w-3xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
         <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)]">
-          
+
           {/* Event Name */}
           <div>
             <label className="block text-sm font-bold mb-1">EVENT NAME</label>
@@ -141,19 +144,30 @@ export default function CreateEventPage() {
             {errors.categories && <p className="text-red-500 text-xs mt-1">{errors.categories.message}</p>}
           </div>
 
+          {/* Recruitment URL */}
+          <div>
+            <label className="block text-sm font-bold mb-1">RECRUITMENT URL (Optional)</label>
+            <input
+              {...register("recruitmentUrl")}
+              type="text"
+              className="w-full border-2 border-text-primary p-2 rounded-sm focus:ring-2 focus:ring-main focus:outline-none"
+              placeholder="Ex: https://peatix.com/..."
+            />
+          </div>
+
           {/* Main Image */}
           <div>
-             <label className="block text-sm font-bold mb-1">MAIN IMAGE</label>
-             <input
-               type="file"
-               accept="image/*"
-               onChange={(e) => {
-                 if (e.target.files?.[0]) {
-                   setImageFile(e.target.files[0]);
-                 }
-               }}
-               className="w-full border-2 border-text-primary p-2 rounded-sm bg-gray-50 from-neutral-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-main file:text-white hover:file:bg-main/80"
-             />
+            <label className="block text-sm font-bold mb-1">MAIN IMAGE</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  setImageFile(e.target.files[0]);
+                }
+              }}
+              className="w-full border-2 border-text-primary p-2 rounded-sm bg-gray-50 from-neutral-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-main file:text-white hover:file:bg-main/80"
+            />
           </div>
 
           {/* Description (Rich Text) */}
@@ -163,9 +177,9 @@ export default function CreateEventPage() {
               name="description"
               control={control}
               render={({ field }) => (
-                <Editor 
-                  content={field.value} 
-                  onChange={field.onChange} 
+                <Editor
+                  content={field.value}
+                  onChange={field.onChange}
                 />
               )}
             />
