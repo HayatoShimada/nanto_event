@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserRoleUpdated = exports.sendEventReminders = exports.onParticipationUpdated = exports.onParticipationCreated = void 0;
+exports.onUserRoleUpdated = exports.sendEventReminders = exports.onParticipationUpdated = exports.handleParticipationCreated = void 0;
+/**
+ * Firebase Functions
+ */
 var onParticipationCreate_1 = require("./triggers/onParticipationCreate");
-Object.defineProperty(exports, "onParticipationCreated", { enumerable: true, get: function () { return onParticipationCreate_1.onParticipationCreated; } });
+Object.defineProperty(exports, "handleParticipationCreated", { enumerable: true, get: function () { return onParticipationCreate_1.handleParticipationCreated; } });
 var onParticipationUpdate_1 = require("./triggers/onParticipationUpdate");
 Object.defineProperty(exports, "onParticipationUpdated", { enumerable: true, get: function () { return onParticipationUpdate_1.onParticipationUpdated; } });
 var onEventReminder_1 = require("./triggers/onEventReminder");

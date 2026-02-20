@@ -6,7 +6,7 @@ if (getApps().length === 0) initializeApp();
 const db = getFirestore();
 
 // event_participations に新規ドキュメント作成時 → 参加確認メール送信
-export const onParticipationCreated = onDocumentCreated(
+export const handleParticipationCreated = onDocumentCreated(
   "event_participations/{participationId}",
   async (event) => {
     const data = event.data?.data();

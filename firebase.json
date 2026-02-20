@@ -9,12 +9,17 @@
   },
   "hosting": {
     "public": "out",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
     "rewrites": [
       {
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
     ]
   },
   "storage": {

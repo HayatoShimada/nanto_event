@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onParticipationCreated = void 0;
+exports.handleParticipationCreated = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const app_1 = require("firebase-admin/app");
@@ -8,7 +8,7 @@ if ((0, app_1.getApps)().length === 0)
     (0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 // event_participations に新規ドキュメント作成時 → 参加確認メール送信
-exports.onParticipationCreated = (0, firestore_1.onDocumentCreated)("event_participations/{participationId}", async (event) => {
+exports.handleParticipationCreated = (0, firestore_1.onDocumentCreated)("event_participations/{participationId}", async (event) => {
     const data = event.data?.data();
     if (!data)
         return;
