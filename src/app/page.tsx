@@ -200,7 +200,7 @@ export default function Home() {
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
                         {loadingNews ? (
                             [1, 2, 3].map(i => (
-                                <div key={i} className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                                <div key={i} className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-4/5 snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
                                     <div className="h-1/3 bg-gray-200 mb-4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
@@ -222,7 +222,7 @@ export default function Home() {
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
                         {loadingEvents ? (
                             [1, 2, 3].map(i => (
-                                <div key={i} className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                                <div key={i} className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
                                     <div className="h-1/2 bg-gray-200 mb-4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
                                     <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
@@ -369,7 +369,7 @@ function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: 
     };
 
     return (
-        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group" onClick={handleJoin}>
+        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group" onClick={handleJoin}>
             <div className="h-[40%] md:h-[45%] bg-bg-sub relative border-b-2 border-text-primary overflow-hidden shrink-0">
                 {event.imageURL ? (
                     <img src={event.imageURL} alt={event.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -428,7 +428,7 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
     const plainDesc = item.description.replace(/<[^>]+>/g, '').substring(0, 80) + "...";
 
     return (
-        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-[4/5] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group">
+        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-4/5 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group">
             <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group-hover:opacity-90 transition-opacity">
                 {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
@@ -475,7 +475,7 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
 
 function TeamCard({ index }: { index: number }) {
     return (
-        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[50%] md:aspect-[3/4] snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
+        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[50%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
             <div className="h-[25%] md:h-[30%] bg-green-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-green-200 font-bold text-2xl">
                 TEAM
             </div>
@@ -498,7 +498,7 @@ function TeamCard({ index }: { index: number }) {
 
 function ViewAllCard() {
     return (
-        <div className="min-w-[50vw] md:min-w-[20vh] w-[50vw] md:w-auto h-[80%] md:h-[50%] md:aspect-[2/3] snap-center flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300">
+        <div className="min-w-[50vw] md:min-w-[20vh] w-[50vw] md:w-auto h-[80%] md:h-[50%] md:aspect-2/3 snap-center flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300">
             <div className="w-16 h-16 border-2 border-current flex items-center justify-center mb-4 group-hover:bg-white transition-colors bg-bg-sub shadow-[4px_4px_0_0_rgba(51,51,51,1)]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </div>

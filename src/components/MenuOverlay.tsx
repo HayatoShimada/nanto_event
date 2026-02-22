@@ -28,7 +28,7 @@ export default function MenuOverlay({ isOpen, onClose }: MenuOverlayProps) {
 
     return (
         <div
-            className={`fixed inset-0 z-[60] bg-white/95 backdrop-blur-md transition-opacity duration-300 flex flex-col justify-center items-center ${isOpen ? "opacity-100" : "opacity-0"
+            className={`fixed inset-0 z-60 bg-white/95 backdrop-blur-md transition-opacity duration-300 flex flex-col justify-center items-center ${isOpen ? "opacity-100" : "opacity-0"
                 } pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]`}
         >
             <button

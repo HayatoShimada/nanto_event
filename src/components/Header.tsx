@@ -38,7 +38,7 @@ export default function Header() {
                         )}
                     </Link>
                 ) : (
-                    <Link href="/login" className="text-xs font-bold text-text-primary border border-text-primary px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors shadow-[2px_2px_0_0_rgba(51,51,51,0.2)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] rounded-sm">
+                    <Link href="/login" className="text-xs font-bold text-text-primary border border-text-primary px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors shadow-[2px_2px_0_0_rgba(51,51,51,0.2)] active:shadow-none active:translate-x-px active:translate-y-px rounded-sm">
                         LOGIN
                     </Link>
                 )}
