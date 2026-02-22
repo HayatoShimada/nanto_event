@@ -50,11 +50,15 @@ export async function getUpcomingEvents(limit = 6): Promise<Event[]> {
 export async function getOrganizedEvents(uid: string): Promise<Event[]> {
   const q = query(
     collection(db, "events"),
-    where("organizerUid", "==", uid),
-    orderBy("startDate", "desc")
+    where("organizerUid", "==", uid)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
+  const events = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
+
+  // Sort descending by startDate in memory to avoid needing a composite index
+  events.sort((a, b) => b.startDate.toMillis() - a.startDate.toMillis());
+
+  return events;
 }
 
 export async function createEvent(

@@ -9,8 +9,9 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { format } from 'date-fns';
-import type { Event as EventType } from '@/types';
-import { incrementParticipationClick } from '@/lib/firebase/firestore';
+import type { Event as EventType, UserProfile } from '@/types';
+import { incrementParticipationClick, getUserProfile } from '@/lib/firebase/firestore';
+import UserModal from '@/components/UserModal';
 
 interface RssItem {
     title: string;
@@ -19,6 +20,7 @@ interface RssItem {
     thumbnail: string;
     description: string;
     author: string;
+    userProfile?: UserProfile;
 }
 
 export default function Home() {
@@ -27,6 +29,7 @@ export default function Home() {
     const [loadingNews, setLoadingNews] = useState(true);
     const [events, setEvents] = useState<EventType[]>([]);
     const [loadingEvents, setLoadingEvents] = useState(true);
+    const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
     useEffect(() => {
         const fetchNoteRss = async () => {
@@ -55,9 +58,17 @@ export default function Home() {
                 // 今は仮に、getDocs(collection(db, "users")) で20件だけ取ってフィルタする（開発環境ならOK）。
 
                 const usersSnap = await getDocs(query(collection(db, "users"), limit(20)));
+                const noteUsersMap = new Map<string, UserProfile>();
                 const noteUrls = usersSnap.docs
-                    .map(d => d.data().noteUrl)
-                    .filter(url => url && url.includes("note.com"));
+                    .map(d => {
+                        const data = { uid: d.id, ...d.data() } as UserProfile;
+                        if (data.noteUrl && data.noteUrl.includes("note.com")) {
+                            noteUsersMap.set(data.noteUrl, data);
+                            return data.noteUrl;
+                        }
+                        return null;
+                    })
+                    .filter(url => url) as string[];
 
                 if (noteUrls.length === 0) {
                     setNewsItems([]);
@@ -73,6 +84,7 @@ export default function Home() {
                     try {
                         const res = await fetch(apiUrl);
                         const data = await res.json();
+                        const userProfile = noteUsersMap.get(url);
                         if (data.status === 'ok') {
                             return data.items.map((item: any) => ({
                                 title: item.title,
@@ -80,7 +92,8 @@ export default function Home() {
                                 link: item.link,
                                 thumbnail: item.thumbnail,
                                 description: item.description,
-                                author: data.feed.title // noteのユーザー名
+                                author: data.feed.title, // noteのユーザー名
+                                userProfile
                             }));
                         }
                         return [];
@@ -194,7 +207,7 @@ export default function Home() {
                                 </div>
                             ))
                         ) : newsItems.length > 0 ? (
-                            newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} index={i} />)
+                            newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} index={i} onUserClick={setSelectedUser} />)
                         ) : (
                             <div className="min-w-[85vw] md:min-w-[35vh] flex items-center justify-center bg-white border-2 border-text-primary p-8">
                                 <p className="text-text-secondary font-bold">No News Available</p>
@@ -216,7 +229,7 @@ export default function Home() {
                                 </div>
                             ))
                         ) : events.length > 0 ? (
-                            events.map((event, i) => <EventCard key={event.id || i} event={event} />)
+                            events.map((event, i) => <EventCard key={event.id || i} event={event} onUserClick={setSelectedUser} />)
                         ) : (
                             <div className="min-w-[80vw] md:min-w-[30vh] flex items-center justify-center bg-white border-2 border-text-primary p-8 text-center">
                                 <p className="text-text-secondary font-bold">No Events Available</p>
@@ -235,6 +248,10 @@ export default function Home() {
                 </Section>
 
             </main>
+
+            {selectedUser && (
+                <UserModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+            )}
         </div>
     );
 }
@@ -331,7 +348,15 @@ function ConceptSection() {
     );
 }
 
-function EventCard({ event }: { event: EventType }) {
+function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: UserProfile) => void }) {
+    const [organizer, setOrganizer] = useState<UserProfile | null>(null);
+
+    useEffect(() => {
+        if (event.organizerUid) {
+            getUserProfile(event.organizerUid).then(setOrganizer).catch(console.error);
+        }
+    }, [event.organizerUid]);
+
     const handleJoin = async () => {
         if (event.id) {
             incrementParticipationClick(event.id).catch(console.error);
@@ -361,15 +386,30 @@ function EventCard({ event }: { event: EventType }) {
             </div>
             <div className="p-4 md:p-5 flex-1 flex flex-col justify-between overflow-y-auto">
                 <div>
-                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-2">
-                        <span className="font-bold text-main">
+                    <div className="flex items-center gap-2 mb-2">
+                        {organizer && (
+                            <div
+                                className="flex items-center gap-2 cursor-pointer group/user shrink-0"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUserClick(organizer); }}
+                            >
+                                {organizer.photoURL ? (
+                                    <img src={organizer.photoURL} alt={organizer.username} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]">
+                                        {organizer.username[0]?.toUpperCase()}
+                                    </div>
+                                )}
+                                <span className="text-xs font-bold text-text-primary group-hover/user:text-main group-hover/user:underline transition-colors truncate max-w-[80px] md:max-w-[120px]">{organizer.username}</span>
+                            </div>
+                        )}
+                        <span className="text-xs font-bold text-main ml-auto shrink-0">
                             {event.startDate ? format(event.startDate.toDate(), "yyyy.MM.dd HH:mm") : ""}
                         </span>
                     </div>
-                    <h3 className="text-base font-bold mb-2 text-text-primary group-hover:text-main transition-colors">
+                    <h3 className="text-base font-bold mb-2 text-text-primary group-hover:text-main transition-colors leading-tight">
                         {event.name}
                     </h3>
-                    <div className="text-xs text-text-secondary truncate-multiline line-clamp-3 mb-2" dangerouslySetInnerHTML={{ __html: event.description || '' }}>
+                    <div className="text-xs text-text-secondary truncate-multiline line-clamp-2 md:line-clamp-3 mb-2" dangerouslySetInnerHTML={{ __html: event.description || '' }}>
                     </div>
                 </div>
                 <div className="pt-3 border-t-2 border-gray-100 mt-2 shrink-0">
@@ -380,7 +420,7 @@ function EventCard({ event }: { event: EventType }) {
     );
 }
 
-function NewsCard({ item, index }: { item: RssItem, index: number }) {
+function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, onUserClick: (u: UserProfile) => void }) {
     // 日付フォーマット
     const dateStr = format(new Date(item.pubDate), 'yyyy.MM.dd');
 
@@ -395,12 +435,28 @@ function NewsCard({ item, index }: { item: RssItem, index: number }) {
                 ) : (
                     "NEWS"
                 )}
-                <div className="absolute top-2 left-2 bg-white/90 px-2 py-0.5 text-[10px] font-bold border border-text-primary text-blue-900 truncate max-w-[90%] z-10 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">
-                    {item.author}
-                </div>
             </div>
             <div className="p-4 md:p-5 flex-1 flex flex-col overflow-y-auto">
-                <span className="text-xs font-bold text-blue-500 mb-2 shrink-0">{dateStr}</span>
+                <div className="flex items-center gap-2 mb-2">
+                    {item.userProfile ? (
+                        <div
+                            className="flex items-center gap-2 cursor-pointer group/user shrink-0"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUserClick(item.userProfile!); }}
+                        >
+                            {item.userProfile.photoURL ? (
+                                <img src={item.userProfile.photoURL} alt={item.userProfile.username} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
+                            ) : (
+                                <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]">
+                                    {item.userProfile.username[0]?.toUpperCase()}
+                                </div>
+                            )}
+                            <span className="text-xs font-bold text-text-primary group-hover/user:text-main group-hover/user:underline transition-colors truncate max-w-[80px] md:max-w-[120px]">{item.userProfile.username}</span>
+                        </div>
+                    ) : (
+                        <span className="text-[10px] font-bold border border-text-primary text-blue-900 bg-white px-2 py-0.5 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">{item.author}</span>
+                    )}
+                    <span className="text-xs font-bold text-blue-500 ml-auto shrink-0">{dateStr}</span>
+                </div>
                 <h3 className="text-base font-bold mb-2 text-text-primary shrink-0 leading-tight group-hover:text-main transition-colors">
                     {item.title}
                 </h3>
