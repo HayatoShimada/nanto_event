@@ -100,8 +100,7 @@ export default function Home() {
     useEffect(() => {
         const fetchNoteRss = async () => {
             try {
-                const q = query(collection(db, "users"), where("noteUrl", "!=", null), limit(10));
-                const usersSnap = await getDocs(query(collection(db, "users"), limit(20)));
+                const usersSnap = await getDocs(query(collection(db, "users"), where("noteUrl", "!=", null), limit(20)));
                 const noteUsersMap = new Map<string, UserProfile>();
                 const noteUrls = usersSnap.docs
                     .map(d => {
@@ -128,6 +127,7 @@ export default function Home() {
                         const data = await res.json();
                         const userProfile = noteUsersMap.get(url);
                         if (data.status === 'ok') {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             return data.items.map((item: any) => ({
                                 title: item.title,
                                 pubDate: item.pubDate,
@@ -314,7 +314,7 @@ export default function Home() {
                                 </div>
                             ))
                         ) : newsItems.length > 0 ? (
-                            newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} index={i} onUserClick={setSelectedUser} />)
+                            newsItems.map((item, i) => <NewsCard key={`news-${i}`} item={item} onUserClick={setSelectedUser} />)
                         ) : (
                             <div className="min-w-[85vw] md:min-w-[35vh] flex items-center justify-center bg-white border-2 border-text-primary p-8">
                                 <p className="text-text-secondary font-bold">No News Available</p>
@@ -556,7 +556,7 @@ export function EventCard({ event, onUserClick }: { event: EventType, onUserClic
                             {event.tags.map((tag, i) => (
                                 <span key={i} className="text-[10px] bg-bg-sub border border-text-primary px-1.5 py-0.5 font-bold flex items-center gap-1 shrink-0" title={tag}>
                                     <span>{TAG_EMOJIS[tag] || "🏷️"}</span>
-                                    <span className="hidden md:inline">{tag}</span>
+                                    <span>{tag}</span>
                                 </span>
                             ))}
                         </div>
@@ -572,7 +572,15 @@ export function EventCard({ event, onUserClick }: { event: EventType, onUserClic
     );
 }
 
-export function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, onUserClick: (u: UserProfile) => void }) {
+export function NewsCard({
+    item,
+    className = "min-w-[85vw] w-[85vw] h-[75%] aspect-auto md:min-w-[300px] md:w-[320px] md:h-auto md:aspect-4/5 snap-center md:snap-align-none bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500 relative",
+    onUserClick
+}: {
+    item: RssItem,
+    className?: string,
+    onUserClick: (u: UserProfile) => void
+}) {
     // 日付フォーマット
     const dateStr = format(new Date(item.pubDate), 'yyyy.MM.dd');
 
@@ -580,8 +588,8 @@ export function NewsCard({ item, index, onUserClick }: { item: RssItem, index: n
     const plainDesc = item.description.replace(/<[^>]+>/g, '').substring(0, 80) + "...";
 
     return (
-        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] w-[85vw] h-[75%] aspect-auto md:min-w-[300px] md:w-[320px] md:h-auto md:aspect-4/5 snap-center md:snap-align-none bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500 relative">
-            <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group-hover:opacity-90 transition-opacity">
+        <a href={item.link} target="_blank" rel="noopener noreferrer" className={className}>
+            <div className={`w-full bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group-hover:opacity-90 transition-opacity ${className.includes('aspect-auto') ? 'h-[30%] md:h-[35%]' : 'aspect-video'}`}>
                 {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
                 ) : (

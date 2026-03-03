@@ -14,20 +14,19 @@ export default function MyPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
   const [organizedEvents, setOrganizedEvents] = useState<EventType[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [ongoingEvents, setOngoingEvents] = useState<EventType[]>([]);
-  const [loadingOngoing, setLoadingOngoing] = useState(false);
+  const [loadingOngoing, setLoadingOngoing] = useState(true);
   const [teams, setTeams] = useState<TeamType[]>([]);
-  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(true);
   const [followingUsersProfiles, setFollowingUsersProfiles] = useState<UserProfile[]>([]);
-  const [loadingFollowing, setLoadingFollowing] = useState(false);
+  const [loadingFollowing, setLoadingFollowing] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     } else if (!loading && user && profile) {
-      setLoadingEvents(true);
       getOrganizedEvents(user.uid).then(events => {
         setOrganizedEvents(events);
         setLoadingEvents(false);
@@ -36,7 +35,6 @@ export default function MyPage() {
         setLoadingEvents(false);
       });
 
-      setLoadingOngoing(true);
       getUpcomingEvents(5).then(events => {
         setOngoingEvents(events);
         setLoadingOngoing(false);
@@ -45,7 +43,6 @@ export default function MyPage() {
         setLoadingOngoing(false);
       });
 
-      setLoadingTeams(true);
       getUserTeams(user.uid).then(teamsData => {
         setTeams(teamsData);
         setLoadingTeams(false);
@@ -55,7 +52,6 @@ export default function MyPage() {
       });
 
       if (profile.followingUsers && profile.followingUsers.length > 0) {
-        setLoadingFollowing(true);
         getUsersByUids(profile.followingUsers).then(usersData => {
           setFollowingUsersProfiles(usersData);
           setLoadingFollowing(false);
@@ -64,7 +60,8 @@ export default function MyPage() {
           setLoadingFollowing(false);
         });
       } else {
-        setFollowingUsersProfiles([]);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoadingFollowing(false);
       }
     }
   }, [user, profile, loading, router]);

@@ -85,7 +85,7 @@ export default function EventsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center">
                     {loading ? (
                         [1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className="w-[80vw] md:w-[320px] aspect-[3/4] bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                            <div key={i} className="w-[80vw] md:w-[320px] aspect-3/4 bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
                                 <div className="h-1/2 bg-gray-200 mb-4"></div>
                                 <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
                                 <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>

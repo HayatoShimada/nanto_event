@@ -32,11 +32,17 @@ export default function NewsPage() {
                 const promises = Array.from(noteUsersMap.entries()).map(async ([noteUrl, userProfile]) => {
                     try {
                         const rssUrl = noteUrl.replace(/\/$/, '') + '/rss';
-                        const res = await fetch(`/api/rss?url=${encodeURIComponent(rssUrl)}`);
+                        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
                         if (!res.ok) return [];
                         const data = await res.json();
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         return (data.items || []).map((item: any) => ({
-                            ...item,
+                            title: item.title,
+                            pubDate: item.pubDate,
+                            link: item.link,
+                            thumbnail: item.thumbnail,
+                            description: item.description || item.content,
+                            author: item.author,
                             userProfile
                         }));
                     } catch (e) {
@@ -74,7 +80,7 @@ export default function NewsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center">
                     {loading ? (
                         [1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className="w-[85vw] md:w-[320px] aspect-[4/5] bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
+                            <div key={i} className="w-[85vw] md:w-[320px] aspect-4/5 bg-white border-2 border-text-primary animate-pulse flex flex-col p-4">
                                 <div className="h-1/3 bg-gray-200 mb-4"></div>
                                 <div className="h-4 bg-gray-200 mb-2 w-3/4"></div>
                                 <div className="h-4 bg-gray-200 mb-2 w-1/2"></div>
@@ -82,8 +88,12 @@ export default function NewsPage() {
                         ))
                     ) : newsItems.length > 0 ? (
                         newsItems.map((item, i) => (
-                            <div key={`news-${i}`} className="w-full flex justify-center py-2">
-                                <NewsCard item={item} index={i} onUserClick={setSelectedUser} />
+                            <div key={`news-${i}`} className="w-full flex justify-center py-2 h-full">
+                                <NewsCard
+                                    item={item}
+                                    onUserClick={setSelectedUser}
+                                    className="w-full h-auto bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500 relative"
+                                />
                             </div>
                         ))
                     ) : (

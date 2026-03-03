@@ -11,7 +11,7 @@ import Header from "@/components/Header";
 import Editor from "@/components/Editor";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Event as EventType, Team } from "@/types";
+import type { Team, EventCategory } from "@/types";
 import { EVENT_TAGS } from "@/constants/tags";
 
 const schema = z.object({
@@ -120,7 +120,7 @@ export default function ClientPage() {
         startDate: Timestamp.fromDate(new Date(data.startDate)),
         finishDate: Timestamp.fromDate(new Date(data.finishDate)),
         location: data.location,
-        categories: data.categories.split(",").map((s) => s.trim()) as any[],
+        categories: data.categories.split(",").map((s) => s.trim()) as EventCategory[],
         description: data.description || "",
         recruitmentUrl: data.recruitmentUrl || "",
         tags: data.tags || [],

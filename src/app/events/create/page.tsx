@@ -12,7 +12,7 @@ import Editor from "@/components/Editor";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { EVENT_TAGS } from "@/constants/tags";
-import type { Team } from "@/types";
+import type { Team, EventCategory } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "イベント名は必須です"),
@@ -70,7 +70,7 @@ export default function CreateEventPage() {
         startDate: Timestamp.fromDate(new Date(data.startDate)),
         finishDate: Timestamp.fromDate(new Date(data.finishDate)),
         location: data.location,
-        categories: data.categories.split(",").map((s) => s.trim()) as any[],
+        categories: data.categories.split(",").map((s) => s.trim()) as EventCategory[],
         description: data.description || "",
         recruitmentUrl: data.recruitmentUrl || "",
         tags: data.tags || [],
