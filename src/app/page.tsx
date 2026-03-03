@@ -495,7 +495,7 @@ export function EventCard({ event, onUserClick }: { event: EventType, onUserClic
 
     const handleJoin = async () => {
         if (event.id) {
-            router.push(`/events/${event.id}`);
+            router.push(`/events/detail?id=${event.id}`);
         }
     };
 

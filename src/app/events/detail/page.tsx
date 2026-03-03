@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { getEvent, incrementPageViews, incrementParticipationClick } from "@/lib/firebase/firestore";
 import type { Event } from "@/types";
 import Header from "@/components/Header";
 import { format } from "date-fns";
+import { useSearchParams } from "next/navigation";
 
-export default function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-    const unwrappedParams = use(params);
-    const id = unwrappedParams.id;
+function EventDetailsContent() {
+    const searchParams = useSearchParams();
+    const id = searchParams.get("id");
 
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
@@ -117,5 +118,17 @@ export default function EventDetailsPage({ params }: { params: Promise<{ id: str
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function EventDetailsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-dvh flex items-center justify-center bg-bg-main">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-main" />
+            </div>
+        }>
+            <EventDetailsContent />
+        </Suspense>
     );
 }

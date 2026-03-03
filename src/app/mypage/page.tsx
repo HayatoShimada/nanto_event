@@ -276,7 +276,7 @@ export default function MyPage() {
                     key={event.id}
                     onClick={() => {
                       if (event.id) {
-                        router.push(`/events/${event.id}`);
+                        router.push(`/events/detail?id=${event.id}`);
                       }
                     }}
                     className="text-left border-2 border-text-primary p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors cursor-pointer group w-full"
