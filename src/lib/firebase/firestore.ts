@@ -27,9 +27,16 @@ import type {
 // ----- イベント CRUD -----
 
 export async function getEvents(): Promise<Event[]> {
-  const q = query(collection(db, "events"), orderBy("startDate", "asc"));
+  const q = query(
+    collection(db, "events"),
+    where("status", "==", "published"),
+    orderBy("startDate", "asc")
+  );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
+  const currentTime = Timestamp.now().toMillis();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as Event)
+    .filter(event => !event.publishedAt || event.publishedAt.toMillis() <= currentTime);
 }
 
 export async function getEvent(eventId: string): Promise<Event | null> {
@@ -41,12 +48,18 @@ export async function getEvent(eventId: string): Promise<Event | null> {
 export async function getUpcomingEvents(limit = 6): Promise<Event[]> {
   const q = query(
     collection(db, "events"),
+    where("status", "==", "published"),
     where("startDate", ">=", Timestamp.now()),
     orderBy("startDate", "asc"),
-    firestoreLimit(limit)
+    firestoreLimit(limit * 2) // We query a bit more to accommodate client-side filtering
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
+  const currentTime = Timestamp.now().toMillis();
+  const events = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as Event)
+    .filter(event => !event.publishedAt || event.publishedAt.toMillis() <= currentTime);
+
+  return events.slice(0, limit);
 }
 
 export async function getOrganizedEvents(uid: string): Promise<Event[]> {
@@ -64,13 +77,16 @@ export async function getOrganizedEvents(uid: string): Promise<Event[]> {
 }
 
 export async function createEvent(
-  data: Omit<Event, "id" | "createdAt" | "updatedAt" | "participationClicks"> & { recruitmentUrl?: string }
+  data: Omit<Event, "id" | "createdAt" | "updatedAt" | "participationClicks" | "pageViews"> & { recruitmentUrl?: string }
 ): Promise<string> {
   const now = Timestamp.now();
   const ref = await addDoc(collection(db, "events"), {
     ...data,
     recruitmentUrl: data.recruitmentUrl || "",
     participationClicks: 0,
+    pageViews: 0,
+    status: data.status || "published",
+    publishedAt: data.publishedAt || now,
     createdAt: now,
     updatedAt: now,
   });
@@ -80,6 +96,12 @@ export async function createEvent(
 export async function incrementParticipationClick(eventId: string): Promise<void> {
   await updateDoc(doc(db, "events", eventId), {
     participationClicks: increment(1)
+  });
+}
+
+export async function incrementPageViews(eventId: string): Promise<void> {
+  await updateDoc(doc(db, "events", eventId), {
+    pageViews: increment(1)
   });
 }
 

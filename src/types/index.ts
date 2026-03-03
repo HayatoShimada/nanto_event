@@ -47,6 +47,9 @@ export interface Event {
   emailNotification: boolean;
   recruitmentUrl?: string; // 外部募集用URL
   participationClicks?: number; // 参加ボタンクリック数
+  pageViews?: number; // 閲覧数（PV）
+  status: "draft" | "published"; // 公開ステータス
+  publishedAt: Timestamp | null; // 公開日時
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

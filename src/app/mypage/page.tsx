@@ -153,7 +153,18 @@ export default function MyPage() {
                 {organizedEvents.map(event => (
                   <div key={event.id} className="border-2 border-text-primary p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-sm leading-tight text-text-primary">{event.name}</h3>
+                      <div className="flex flex-col gap-1">
+                        <h3 className="font-bold text-sm leading-tight text-text-primary">{event.name}</h3>
+                        <div className="flex gap-2 text-[10px] font-bold">
+                          {event.status === "draft" ? (
+                            <span className="bg-gray-200 text-gray-700 px-2 border border-gray-400">下書き</span>
+                          ) : event.publishedAt && event.publishedAt.toMillis() > Date.now() ? (
+                            <span className="bg-orange-100 text-orange-700 px-2 border border-orange-400">予約公開</span>
+                          ) : (
+                            <span className="bg-green-100 text-green-700 px-2 border border-green-400">公開中</span>
+                          )}
+                        </div>
+                      </div>
                       <span className="text-[10px] items-center px-2 py-0.5 font-bold bg-main/10 text-main border border-main shrink-0">
                         {event.startDate ? format(event.startDate.toDate(), "yyyy.MM.dd") : ""}
                       </span>
@@ -161,7 +172,8 @@ export default function MyPage() {
 
                     <div className="flex justify-between items-end mt-2">
                       <div className="flex gap-4 text-xs font-bold text-text-secondary">
-                        <span className="flex items-center gap-1">🖱️ <span className="text-main font-mono">{event.participationClicks || 0}</span></span>
+                        <span className="flex items-center gap-1" title="ページビュー">👁️ <span className="text-main font-mono">{event.pageViews || 0}</span></span>
+                        <span className="flex items-center gap-1" title="参加クリック">🖱️ <span className="text-main font-mono">{event.participationClicks || 0}</span></span>
                       </div>
                       <Link href={`/events/edit?id=${event.id}`} className="text-sm bg-text-primary text-white px-5 py-2 font-bold hover:opacity-80 transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">
                         EDIT
@@ -264,12 +276,7 @@ export default function MyPage() {
                     key={event.id}
                     onClick={() => {
                       if (event.id) {
-                        requestAnimationFrame(() => incrementParticipationClick(event.id!).catch(console.error));
-                      }
-                      if (event.recruitmentUrl) {
-                        window.open(event.recruitmentUrl, "_blank", "noopener,noreferrer");
-                      } else {
-                        alert("募集ページが設定されていません。");
+                        router.push(`/events/${event.id}`);
                       }
                     }}
                     className="text-left border-2 border-text-primary p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors cursor-pointer group w-full"
@@ -281,7 +288,7 @@ export default function MyPage() {
                       </span>
                     </div>
                     <div className="mt-2 text-right w-full">
-                      <span className="text-xs font-bold text-main border-2 border-main px-3 py-1 group-hover:bg-main group-hover:text-white transition-all inline-block active:scale-95">JOIN</span>
+                      <span className="text-xs font-bold text-main border-2 border-main px-3 py-1 group-hover:bg-main group-hover:text-white transition-all inline-block active:scale-95">SEE DETAILS</span>
                     </div>
                   </button>
                 ))}

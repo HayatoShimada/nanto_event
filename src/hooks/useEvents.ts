@@ -20,13 +20,19 @@ export function useEvents() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, "events"), orderBy("startDate", "asc"));
+    const q = query(
+      collection(db, "events"),
+      where("status", "==", "published"),
+      orderBy("startDate", "asc")
+    );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setEvents(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event)
-        );
+        const currentTime = Timestamp.now().toMillis();
+        const updatedEvents = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Event)
+          .filter(e => !e.publishedAt || e.publishedAt.toMillis() <= currentTime);
+        setEvents(updatedEvents);
         setLoading(false);
       },
       (err) => {
@@ -76,16 +82,20 @@ export function useUpcomingEvents(limit = 6) {
   useEffect(() => {
     const q = query(
       collection(db, "events"),
+      where("status", "==", "published"),
       where("startDate", ">=", Timestamp.now()),
       orderBy("startDate", "asc"),
-      firestoreLimit(limit)
+      firestoreLimit(limit * 2)
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setEvents(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Event)
-        );
+        const currentTime = Timestamp.now().toMillis();
+        const updatedEvents = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Event)
+          .filter(e => !e.publishedAt || e.publishedAt.toMillis() <= currentTime)
+          .slice(0, limit);
+        setEvents(updatedEvents);
         setLoading(false);
       },
       (err) => {

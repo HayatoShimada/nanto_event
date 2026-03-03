@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import VerticalNav from '@/components/VerticalNav';
 import { useState, useEffect } from 'react';
@@ -482,6 +483,7 @@ function ConceptSection() {
 }
 
 export function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: UserProfile) => void }) {
+    const router = useRouter();
     const [organizer, setOrganizer] = useState<UserProfile | null>(null);
 
     useEffect(() => {
@@ -492,12 +494,7 @@ export function EventCard({ event, onUserClick }: { event: EventType, onUserClic
 
     const handleJoin = async () => {
         if (event.id) {
-            incrementParticipationClick(event.id).catch(console.error);
-        }
-        if (event.recruitmentUrl) {
-            window.open(event.recruitmentUrl, "_blank", "noopener,noreferrer");
-        } else {
-            alert("募集ページが設定されていません。");
+            router.push(`/events/${event.id}`);
         }
     };
 
@@ -565,7 +562,7 @@ export function EventCard({ event, onUserClick }: { event: EventType, onUserClic
                     </div>
                 </div>
                 <div className="pt-3 border-t-2 border-gray-100 mt-2 shrink-0">
-                    <div aria-hidden="true" className="text-center text-sm font-bold text-main border-2 border-main px-4 py-2 group-hover:bg-main group-hover:text-white transition-all w-full select-none">JOIN</div>
+                    <div aria-hidden="true" className="text-center text-sm font-bold text-main border-2 border-main px-4 py-2 group-hover:bg-main group-hover:text-white transition-all w-full select-none">SEE DETAILS</div>
                 </div>
             </div>
         </article>

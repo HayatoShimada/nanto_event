@@ -25,6 +25,9 @@ const schema = z.object({
   tags: z.array(z.string()).max(2, "タグは最大2つまで選択できます").optional(),
   organizerType: z.enum(["user", "team"]).optional(),
   teamId: z.string().optional(),
+  status: z.enum(["draft", "published"]),
+  publishType: z.enum(["immediate", "scheduled"]).optional(),
+  publishedAt: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -50,6 +53,10 @@ export default function ClientPage() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      status: "published",
+      publishType: "immediate",
+    }
   });
 
   useEffect(() => {
@@ -86,6 +93,17 @@ export default function ClientPage() {
       if (eventData.organizerType === "team") {
         setValue("teamId", eventData.organizerUid);
       }
+
+      setValue("status", eventData.status || "published");
+      if (eventData.publishedAt) {
+        setValue("publishedAt", formatDateForInput(eventData.publishedAt));
+        // If publishedAt is in the future relative to createdAt, maybe consider it "scheduled".
+        // But simply showing the datetime is enough. Let's just set the datetime.
+        setValue("publishType", "scheduled");
+      } else {
+        setValue("publishType", "immediate");
+      }
+
       setCurrentImageURL(eventData.imageURL);
 
       setLoading(false);
@@ -115,6 +133,13 @@ export default function ClientPage() {
         imageURL = await uploadEventImage(id as string, imageFile);
       }
 
+      let publishTimestamp = null;
+      if (data.status === "published") {
+        publishTimestamp = data.publishType === "immediate" || !data.publishedAt
+          ? Timestamp.now()
+          : Timestamp.fromDate(new Date(data.publishedAt));
+      }
+
       await updateEvent(id as string, {
         name: data.name,
         startDate: Timestamp.fromDate(new Date(data.startDate)),
@@ -127,6 +152,8 @@ export default function ClientPage() {
         imageURL: imageURL,
         organizerUid: data.organizerType === "team" && data.teamId ? data.teamId : user.uid,
         organizerType: data.organizerType || "user",
+        status: data.status,
+        publishedAt: publishTimestamp,
       });
 
       alert("イベントを更新しました");
@@ -324,6 +351,52 @@ export default function ClientPage() {
                 />
               )}
             />
+          </div>
+
+          <hr className="border-text-primary/20" />
+
+          {/* Status Settings */}
+          <div>
+            <label className="block text-xl font-bold mb-3">PUBLISH SETTINGS</label>
+            <div className="space-y-4">
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer font-bold">
+                  <input type="radio" value="published" {...register("status")} className="accent-main w-4 h-4" />
+                  公開
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer font-bold">
+                  <input type="radio" value="draft" {...register("status")} className="accent-main w-4 h-4" />
+                  下書き
+                </label>
+              </div>
+
+              {watch("status") === "published" && (
+                <div className="pl-6 border-l-4 border-main/50 space-y-3 mt-3">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" value="immediate" {...register("publishType")} className="accent-main" />
+                      今すぐ公開（保存時）
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" value="scheduled" {...register("publishType")} className="accent-main" />
+                      日時を指定して予約公開
+                    </label>
+                  </div>
+
+                  {watch("publishType") === "scheduled" && (
+                    <div>
+                      <label className="block text-sm font-bold mb-1 text-text-primary/70">SCHEDULED DATE & TIME</label>
+                      <input
+                        {...register("publishedAt")}
+                        type="datetime-local"
+                        className="w-full md:w-1/2 border-2 border-text-primary p-2 rounded-sm focus:ring-2 focus:ring-main focus:outline-none"
+                      />
+                      {errors.publishedAt && <p className="text-red-500 text-xs mt-1">{errors.publishedAt.message}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Submit Button */}
