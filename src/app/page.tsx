@@ -14,7 +14,7 @@ import UserModal from '@/components/UserModal';
 import { TAG_EMOJIS, USER_TAGS } from '@/constants/tags';
 import { updateUserProfile } from '@/lib/firebase/firestore';
 
-interface RssItem {
+export interface RssItem {
     title: string;
     pubDate: string;
     link: string;
@@ -26,39 +26,81 @@ interface RssItem {
 
 export default function Home() {
     const { user, profile, logout } = useAuth();
+    const [allNewsItems, setAllNewsItems] = useState<RssItem[]>([]);
     const [newsItems, setNewsItems] = useState<RssItem[]>([]);
+    const [visibleNewsCount, setVisibleNewsCount] = useState(5);
     const [loadingNews, setLoadingNews] = useState(true);
+
+    const [allEvents, setAllEvents] = useState<EventType[]>([]);
     const [events, setEvents] = useState<EventType[]>([]);
+    const [visibleEventsCount, setVisibleEventsCount] = useState(10);
     const [loadingEvents, setLoadingEvents] = useState(true);
+
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [selectedTag, setSelectedTag] = useState<string>("ALL");
+    const [activeSection, setActiveSection] = useState<string>("all");
+
+    // IntersectionObserver to detect active section for Sidebar highlight
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setActiveSection(entry.target.id);
+                    }
+                });
+            },
+            { threshold: 0.3 }
+        );
+
+        const sections = ["all", "news", "events", "teams"];
+        sections.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
+    // IntersectionObserver for infinite scrolling of horizontal lists
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        if (entry.target.id === 'news-load-trigger') {
+                            setVisibleNewsCount(prev => prev + 5);
+                        } else if (entry.target.id === 'events-load-trigger') {
+                            setVisibleEventsCount(prev => prev + 10);
+                        }
+                    }
+                });
+            },
+            { threshold: 0.1 }
+        );
+
+        const newsTrigger = document.getElementById('news-load-trigger');
+        const eventsTrigger = document.getElementById('events-load-trigger');
+
+        if (newsTrigger) observer.observe(newsTrigger);
+        if (eventsTrigger) observer.observe(eventsTrigger);
+
+        return () => observer.disconnect();
+    }, [newsItems.length, events.length]); // Re-run when rendered items change to re-bind if triggers unmount
+
+    // Update visible lists when all items or limits change
+    useEffect(() => {
+        setNewsItems(allNewsItems.slice(0, visibleNewsCount));
+    }, [allNewsItems, visibleNewsCount]);
+
+    useEffect(() => {
+        setEvents(allEvents.slice(0, visibleEventsCount));
+    }, [allEvents, visibleEventsCount]);
 
     useEffect(() => {
         const fetchNoteRss = async () => {
             try {
-                // noteUrlを持つユーザーを取得 (とりあえず簡易的に)
-                // 本来はインデックスが必要: where("noteUrl", "!=", "")
-                // ここでは全件取得してJSで絞るか、admin/collaboratorに限定する
-                // Issue #1により全員発信者のため、とりあえず全usersからnoteUrlがあるものを探すのはコスト高。
-                // 暫定措置: "role" が "admin" または "organizer" のユーザー、あるいは特定コレクション
-                // 今回は「noteUrlを持つユーザー」をクエリで取れる範囲で取る（インデックスがないとエラーになる可能性があるがtry）
-
                 const q = query(collection(db, "users"), where("noteUrl", "!=", null), limit(10));
-                // Note: Firestoreでは "!=" null は使えない、orderBy("noteUrl")が必要。
-                // 代わりにクライアント側でフィルタするか、運用でカバー。
-                // ここではデモとして、特定ユーザー(自分など)のRSSを表示する形にするため、
-                // ログインユーザーのRSSを表示する...のではなく、"みんなのニュース"なので、
-                // 特定の運営アカウントのnoteUrlをハードコードまたはConfig取得が安全だが、
-                // 要望は「userが...掲載している場合」なので、動的に取得したい。
-
-                // Firestoreの制約を回避するため、"updatedAt" desc で最新ユーザー20件を取得し、その中でnoteUrlがあるものを探す戦略
-                // const usersSnap = await getDocs(query(collection(db, "users"), orderBy("updatedAt", "desc"), limit(20)));
-                // -> インデックス必要。
-
-                // シンプルに: collection(db, "users") 全件取得はNG。
-                // "users" に "hasNoteUrl" フラグを持たせるのがベストだが未実装。
-                // 今は仮に、getDocs(collection(db, "users")) で20件だけ取ってフィルタする（開発環境ならOK）。
-
                 const usersSnap = await getDocs(query(collection(db, "users"), limit(20)));
                 const noteUsersMap = new Map<string, UserProfile>();
                 const noteUrls = usersSnap.docs
@@ -78,8 +120,6 @@ export default function Home() {
                     return;
                 }
 
-                // RSS取得 (rss2json使用)
-                // noteのRSS URL形式: https://note.com/{id}/rss
                 const promises = noteUrls.map(async (url: string) => {
                     const rssUrl = url.endsWith("/rss") ? url : `${url.replace(/\/$/, '')}/rss`;
                     const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
@@ -94,7 +134,7 @@ export default function Home() {
                                 link: item.link,
                                 thumbnail: item.thumbnail,
                                 description: item.description,
-                                author: data.feed.title, // noteのユーザー名
+                                author: data.feed.title,
                                 userProfile
                             }));
                         }
@@ -107,7 +147,7 @@ export default function Home() {
 
                 const results = await Promise.all(promises);
                 const allItems = results.flat().sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-                setNewsItems(allItems.slice(0, 5)); // 最新5件
+                setAllNewsItems(allItems);
 
             } catch (error) {
                 console.error("News fetch error:", error);
@@ -119,16 +159,14 @@ export default function Home() {
         const fetchEvents = async () => {
             setLoadingEvents(true);
             try {
-                // Fetch upcoming events
-                const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(50)));
+                const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(200)));
                 let fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
 
-                // Memory filter by selectedTag
                 if (selectedTag !== "ALL") {
                     fetchedEvents = fetchedEvents.filter(e => e.tags && e.tags.includes(selectedTag));
                 }
 
-                setEvents(fetchedEvents.slice(0, 10)); // Display up to 10
+                setAllEvents(fetchedEvents);
             } catch (error) {
                 console.error("Failed to fetch events:", error);
             } finally {
@@ -178,10 +216,10 @@ export default function Home() {
                 </div>
 
                 <nav className="flex flex-col gap-5">
-                    <NavItem href="#all" label="ALL" active />
-                    <NavItem href="#news" label="NEWS" />
-                    <NavItem href="#events" label="EVENTS" />
-                    <NavItem href="#teams" label="TEAMS" />
+                    <NavItem href="#all" label="ALL" active={activeSection === "all"} />
+                    <NavItem href="#news" label="NEWS" active={activeSection === "news"} />
+                    <NavItem href="#events" label="EVENTS" active={activeSection === "events"} />
+                    <NavItem href="#teams" label="TEAMS" active={activeSection === "teams"} />
                     <NavItem href={user ? "/mypage" : "/login"} label="MY PAGE" />
                 </nav>
 
@@ -225,10 +263,10 @@ export default function Home() {
             </aside>
 
             {/* Main Content Area - Vertical Scroll with Snap (Mobile) / Normal Flow (PC) */}
-            <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory md:snap-none hide-scrollbar pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] scroll-pt-[calc(6.5rem+env(safe-area-inset-top))] md:pt-0 md:pb-0 md:scroll-pt-0 relative">
+            <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory md:snap-none hide-scrollbar pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 relative">
 
                 {/* Tag Selector Bar (Sticky Top) */}
-                <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-40 bg-bg-main border-b-2 border-text-primary px-4 py-2 flex items-start justify-between">
+                <div className="sticky top-0 z-40 bg-bg-main border-b-2 border-text-primary px-4 py-2 flex items-start justify-between">
                     <div className="flex-1 flex flex-wrap gap-2">
                         <button
                             onClick={() => setSelectedTag("ALL")}
@@ -282,7 +320,12 @@ export default function Home() {
                                 <p className="text-text-secondary font-bold">No News Available</p>
                             </div>
                         )}
-                        <ViewAllCard />
+                        <ViewAllCard href="/news" />
+                        {newsItems.length < allNewsItems.length && (
+                            <div id="news-load-trigger" className="snap-center min-w-[20px] h-full flex items-center justify-center shrink-0">
+                                <div className="w-6 h-6 border-2 border-main border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        )}
                     </div>
                 </Section>
 
@@ -304,7 +347,12 @@ export default function Home() {
                                 <p className="text-text-secondary font-bold">No Events Available</p>
                             </div>
                         )}
-                        <ViewAllCard />
+                        <ViewAllCard href="/events" />
+                        {events.length < allEvents.length && (
+                            <div id="events-load-trigger" className="snap-center min-w-[20px] h-full flex items-center justify-center shrink-0">
+                                <div className="w-6 h-6 border-2 border-main border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        )}
                     </div>
                 </Section>
 
@@ -328,10 +376,10 @@ export default function Home() {
 
 function Section({ id, title, children, showNextHint = true, showPrevHint = false }: { id: string, title: string, children: React.ReactNode, showNextHint?: boolean, showPrevHint?: boolean }) {
     return (
-        <section id={id} className="w-full h-dvh md:h-auto md:min-h-screen snap-start md:snap-align-none flex flex-col justify-start md:justify-center pt-[calc(4rem+env(safe-area-inset-top))] pb-2 md:py-12 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
+        <section id={id} className="w-full h-full min-h-[500px] md:h-auto md:min-h-screen snap-start md:snap-align-none flex flex-col justify-start md:justify-center pt-28 pb-8 md:pt-12 md:pb-12 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
             {/* Previous Hint */}
             {showPrevHint && (
-                <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 flex flex-col items-center opacity-40 md:hidden z-20">
+                <div className="absolute top-22 left-1/2 -translate-x-1/2 flex flex-col items-center opacity-40 md:hidden z-20">
                     <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </div>
             )}
@@ -358,9 +406,23 @@ function Section({ id, title, children, showNextHint = true, showPrevHint = fals
 }
 
 function NavItem({ href, label, active = false }: { href: string; label: string; active?: boolean }) {
+    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (href.startsWith('#')) {
+            const targetId = href.substring(1);
+            const el = document.getElementById(targetId);
+            if (el) {
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth' });
+                // update URL hash without triggering default jump
+                history.replaceState(null, '', href);
+            }
+        }
+    };
+
     return (
         <Link
             href={href}
+            onClick={handleClick}
             className={`text-base font-bold transition-all duration-200 border-b-2 ${active ? 'text-main border-main' : 'text-text-primary border-transparent hover:border-sub'
                 } w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-main rounded-sm`}
             aria-current={active ? 'page' : undefined}
@@ -419,7 +481,7 @@ function ConceptSection() {
     );
 }
 
-function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: UserProfile) => void }) {
+export function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: UserProfile) => void }) {
     const [organizer, setOrganizer] = useState<UserProfile | null>(null);
 
     useEffect(() => {
@@ -510,7 +572,7 @@ function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: 
     );
 }
 
-function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, onUserClick: (u: UserProfile) => void }) {
+export function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, onUserClick: (u: UserProfile) => void }) {
     // 日付フォーマット
     const dateStr = format(new Date(item.pubDate), 'yyyy.MM.dd');
 
@@ -567,13 +629,13 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
 
 
 
-function ViewAllCard() {
+function ViewAllCard({ href }: { href: string }) {
     return (
-        <button type="button" className="min-w-[50vw] w-[50vw] h-[80%] aspect-auto md:min-w-[300px] md:w-[320px] md:h-auto md:aspect-2/3 snap-center md:snap-align-none flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-main py-10 md:py-0">
+        <Link href={href} className="min-w-[50vw] w-[50vw] h-[80%] aspect-auto md:min-w-[300px] md:w-[320px] md:h-auto md:aspect-2/3 snap-center md:snap-align-none flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-main py-10 md:py-0">
             <div className="w-16 h-16 border-2 border-current flex items-center justify-center mb-4 group-hover:bg-white transition-colors bg-bg-sub shadow-[4px_4px_0_0_rgba(51,51,51,1)]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" aria-hidden="true" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </div>
             <span className="font-bold tracking-widest border-b-2 border-transparent group-hover:border-main text-base">VIEW ALL</span>
-        </button>
+        </Link>
     );
 }

@@ -11,7 +11,7 @@ export default function Header() {
 
     return (
         <>
-            <header className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 py-3 md:hidden shadow-sm transition-all duration-300 pt-[env(safe-area-inset-top)]">
+            <header className="relative w-full h-14 box-content bg-white border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 md:hidden shadow-sm pt-[env(safe-area-inset-top)] shrink-0">
                 <button
                     type="button"
                     onClick={() => setIsOpen(true)}
