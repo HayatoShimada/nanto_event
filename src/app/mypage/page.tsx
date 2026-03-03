@@ -76,7 +76,7 @@ export default function MyPage() {
 
   return (
     <div className="h-dvh w-screen flex flex-col bg-bg-main overflow-hidden text-text-primary font-sans">
-      <Header />
+      <Header alwaysShowOnDesktop />
 
       <main className="flex-1 w-full flex flex-col md:flex-row items-center md:items-start md:justify-center p-4 py-8 pt-[calc(5rem+env(safe-area-inset-top))] gap-8 overflow-y-auto">
         <div className="flex flex-col gap-8 w-full max-w-md shrink-0 mt-4 md:mt-0">

@@ -193,7 +193,7 @@ export default function ClientPage() {
 
   return (
     <div className="min-h-dvh bg-bg-main text-text-primary font-sans">
-      <Header />
+      <Header alwaysShowOnDesktop />
 
       <main className="max-w-3xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
         <div className="flex justify-between items-center mb-6">

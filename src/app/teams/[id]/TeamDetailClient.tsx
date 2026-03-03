@@ -60,7 +60,7 @@ export default function TeamDetailPage() {
 
     return (
         <div className="min-h-dvh bg-bg-main text-text-primary font-sans flex flex-col">
-            <Header />
+            <Header alwaysShowOnDesktop />
 
             <main className="flex-1 max-w-4xl mx-auto w-full p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
                 <div className="bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] overflow-hidden relative">

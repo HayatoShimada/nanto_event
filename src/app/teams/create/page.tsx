@@ -76,7 +76,7 @@ export default function CreateTeamPage() {
 
     return (
         <div className="h-dvh w-screen flex flex-col bg-bg-main overflow-hidden text-text-primary font-sans">
-            <Header />
+            <Header alwaysShowOnDesktop />
 
             <main className="flex-1 w-full flex items-center justify-center p-4 pt-[calc(4rem+env(safe-area-inset-top))] md:pt-24 pb-20 overflow-y-auto">
                 <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-6 md:p-8 flex flex-col gap-6 relative my-8">

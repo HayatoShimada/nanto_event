@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useState } from "react";
 import MenuOverlay from "./MenuOverlay";
 
-export default function Header() {
+export default function Header({ alwaysShowOnDesktop = false }: { alwaysShowOnDesktop?: boolean }) {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
     return (
         <>
-            <header className="relative w-full h-14 box-content bg-white border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 md:hidden shadow-sm pt-[env(safe-area-inset-top)] shrink-0">
+            <header className={`relative w-full h-14 box-content bg-white border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 shadow-sm pt-[env(safe-area-inset-top)] shrink-0 ${alwaysShowOnDesktop ? '' : 'md:hidden'}`}>
                 <button
                     type="button"
                     onClick={() => setIsOpen(true)}

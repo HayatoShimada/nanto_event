@@ -111,7 +111,7 @@ export default function CreateEventPage() {
 
   return (
     <div className="min-h-dvh bg-bg-main text-text-primary font-sans">
-      <Header />
+      <Header alwaysShowOnDesktop />
 
       <main className="max-w-3xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
         <h1 className="text-2xl font-bold mb-6">Create New Event</h1>

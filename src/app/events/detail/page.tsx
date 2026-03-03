@@ -44,7 +44,7 @@ function EventDetailsContent() {
     if (!event) {
         return (
             <div className="min-h-dvh bg-bg-main font-sans text-text-primary">
-                <Header />
+                <Header alwaysShowOnDesktop />
                 <main className="max-w-3xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))]">
                     <div className="bg-white p-8 text-center border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)]">
                         <h1 className="text-2xl font-bold mb-4">Event not found</h1>
@@ -57,7 +57,7 @@ function EventDetailsContent() {
 
     return (
         <div className="min-h-dvh bg-bg-main font-sans text-text-primary">
-            <Header />
+            <Header alwaysShowOnDesktop />
             <main className="max-w-4xl mx-auto p-4 pt-[calc(5rem+env(safe-area-inset-top))] pb-20">
                 <div className="bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] overflow-hidden">
                     {event.imageURL && (
