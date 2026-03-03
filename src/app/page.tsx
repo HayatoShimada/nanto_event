@@ -438,16 +438,16 @@ function ConceptSection() {
     return (
         <div className="w-full h-full flex flex-col md:flex-row gap-8 items-center justify-center snap-center shrink-0">
             {/* Main Concept Card */}
-            <div className="w-full md:w-1/2 h-auto md:h-full flex flex-col justify-center gap-6 p-6 md:p-10 bg-white border-4 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative overflow-hidden group">
+            <div className="w-full max-w-4xl h-auto md:h-auto py-12 flex flex-col justify-center gap-6 p-6 md:p-12 bg-white border-4 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-main/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-main/10 transition-colors duration-700"></div>
 
                 <div className="relative z-10">
                     <span className="text-main font-bold tracking-[0.2em] text-sm md:text-base border-b-2 border-main pb-1 inline-block mb-4">NANTS CONCEPT</span>
-                    <h2 className="text-3xl md:text-4xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif break-keep">
+                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif break-keep">
                         楽しむ、<span className="text-main underline decoration-4 decoration-main/30 underline-offset-4">つながる、</span>応援する
                     </h2>
 
-                    <div className="space-y-4 text-text-secondary font-medium text-sm md:text-base leading-loose">
+                    <div className="space-y-4 text-text-secondary font-medium text-sm md:text-lg lg:text-xl leading-loose">
                         <p>
                             参加する一人ひとりが、<br className="hidden md:inline" />
                             <strong className="text-text-primary bg-main/10 px-1">一緒に場を盛り上げる</strong> こと。
@@ -466,17 +466,8 @@ function ConceptSection() {
                 <div className="mt-8 relative z-10">
                     <Link href="/about" className="inline-flex items-center gap-2 px-8 py-4 bg-text-primary text-white font-bold tracking-widest hover:bg-main transition-colors shadow-[4px_4px_0_0_rgba(200,200,200,1)] hover:shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none">
                         READ MORE
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </Link>
-                </div>
-            </div>
-
-            {/* Sub Visual / Quick Access */}
-            <div className="hidden md:flex flex-col w-1/3 h-full gap-4 box-border pb-10 pt-20">
-                <div className="flex-1 bg-main/10 border-2 border-dashed border-main/30 rounded-lg flex items-center justify-center p-8 text-center">
-                    <p className="text-text-primary font-bold opacity-50">
-                        COMMUNITY VISUAL<br />PLACEHOLDER
-                    </p>
                 </div>
             </div>
         </div>
