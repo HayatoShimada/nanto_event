@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
-import MenuOverlay from '@/components/MenuOverlay';
 import VerticalNav from '@/components/VerticalNav';
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
@@ -12,6 +11,7 @@ import { format } from 'date-fns';
 import type { Event as EventType, UserProfile } from '@/types';
 import { incrementParticipationClick, getUserProfile } from '@/lib/firebase/firestore';
 import UserModal from '@/components/UserModal';
+import { TAG_EMOJIS } from '@/constants/tags';
 
 interface RssItem {
     title: string;
@@ -140,7 +140,10 @@ export default function Home() {
 
             {/* Sidebar - Left Stick (Desktop Only) */}
             <aside className="hidden md:flex w-48 bg-bg-sub h-full flex-col p-4 shrink-0 border-r-2 border-text-primary z-50 shadow-xl relative">
-                <h1 className="text-2xl font-bold text-main mb-10 tracking-wider">NANTS</h1>
+                <div className="flex items-center gap-2 mb-10">
+                    <h1 className="text-2xl font-bold text-main tracking-wider">NANTS</h1>
+                    <span className="text-[10px] font-bold bg-main text-white px-2 py-0.5 rounded-sm tracking-widest">BETA</span>
+                </div>
 
                 <nav className="flex flex-col gap-5">
                     <NavItem href="#all" label="ALL" active />
@@ -152,16 +155,19 @@ export default function Home() {
 
                 <div className="mt-auto">
                     {user ? (
-                        <div className="flex items-center gap-2 p-2 bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] group relative cursor-pointer hover:bg-gray-50 transition-colors"
+                        <button
+                            type="button"
+                            className="w-full flex items-center gap-2 p-2 bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] group relative cursor-pointer hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-main text-left"
                             onClick={() => {
                                 const conf = confirm("ログアウトしますか？");
                                 if (conf) logout();
                             }}
+                            aria-label="ログアウト"
                         >
                             {user.photoURL ? (
-                                <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-text-primary object-cover" />
+                                <img src={user.photoURL} alt={`${user.displayName || "User"}のアイコン`} className="w-8 h-8 rounded-full border border-text-primary object-cover" />
                             ) : (
-                                <div className="w-8 h-8 bg-main/20 flex items-center justify-center text-main font-bold border border-text-primary text-xs">
+                                <div className="w-8 h-8 bg-main/20 flex items-center justify-center text-main font-bold border border-text-primary text-xs" aria-hidden="true">
                                     {user.displayName ? user.displayName[0].toUpperCase() : "U"}
                                 </div>
                             )}
@@ -169,7 +175,7 @@ export default function Home() {
                                 <p className="text-xs font-bold truncate max-w-[90px]">{user.displayName || "User"}</p>
                                 <p className="text-[10px] text-text-secondary truncate">Logout</p>
                             </div>
-                        </div>
+                        </button>
                     ) : (
                         <Link href="/login" className="block w-full">
                             <div className="flex items-center justify-center p-2 bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_rgba(51,51,51,1)] transition-all font-bold text-xs text-center text-main active:shadow-none active:translate-x-[2px] active:translate-y-[2px]">
@@ -242,8 +248,9 @@ export default function Home() {
                 {/* Section: TEAMS */}
                 <Section id="teams" title="TEAMS" showPrevHint={true} showNextHint={false}>
                     <div className="flex gap-4 md:gap-8 items-center h-full px-4 md:px-12 pb-0 md:pb-12 box-border">
-                        {[1, 2, 3, 4, 5].map(i => <TeamCard key={`team-${i}`} index={i} />)}
-                        <ViewAllCard />
+                        <div className="min-w-[80vw] md:min-w-[30vh] flex items-center justify-center bg-white border-2 border-text-primary p-8 text-center">
+                            <p className="text-text-secondary font-bold">No Teams Available</p>
+                        </div>
                     </div>
                 </Section>
 
@@ -292,7 +299,8 @@ function NavItem({ href, label, active = false }: { href: string; label: string;
         <Link
             href={href}
             className={`text-base font-bold transition-all duration-200 border-b-2 ${active ? 'text-main border-main' : 'text-text-primary border-transparent hover:border-sub'
-                } w-fit`}
+                } w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-main rounded-sm`}
+            aria-current={active ? 'page' : undefined}
         >
             {label}
         </Link>
@@ -308,22 +316,22 @@ function ConceptSection() {
 
                 <div className="relative z-10">
                     <span className="text-main font-bold tracking-[0.2em] text-sm md:text-base border-b-2 border-main pb-1 inline-block mb-4">NANTS CONCEPT</span>
-                    <h2 className="text-3xl md:text-5xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif">
-                        楽しむ &lt; <span className="text-main underline decoration-4 decoration-main/30 underline-offset-4">楽しませる</span>
+                    <h2 className="text-3xl md:text-4xl font-black text-text-primary leading-tight mb-4 md:mb-8 font-serif break-keep">
+                        楽しむ、<span className="text-main underline decoration-4 decoration-main/30 underline-offset-4">つながる、</span>応援する
                     </h2>
 
                     <div className="space-y-4 text-text-secondary font-medium text-sm md:text-base leading-loose">
                         <p>
-                            自分だけが楽しむのではなく、<br className="hidden md:inline" />
-                            <strong className="text-text-primary bg-main/10 px-1">誰かを楽しませる</strong> こと。
+                            参加する一人ひとりが、<br className="hidden md:inline" />
+                            <strong className="text-text-primary bg-main/10 px-1">一緒に場を盛り上げる</strong> こと。
                         </p>
                         <p>
-                            イベントに参加するだけで、<br className="hidden md:inline" />
-                            運営している人を <strong className="text-text-primary bg-main/10 px-1">応援</strong> できること。
+                            気軽に足を運ぶことが、<br className="hidden md:inline" />
+                            企画する人への <strong className="text-text-primary bg-main/10 px-1">応援</strong> につながること。
                         </p>
                         <p>
-                            そして <strong className="text-text-primary bg-main/10 px-1">オープン</strong> で <strong className="text-text-primary bg-main/10 px-1">自由</strong> で、<br className="hidden md:inline" />
-                            <strong className="text-text-primary bg-main/10 px-1">性善説</strong> で運営されること。
+                            お互いの <strong className="text-text-primary bg-main/10 px-1">思いやり</strong> や <strong className="text-text-primary bg-main/10 px-1">信頼</strong> を大切に、<br className="hidden md:inline" />
+                            <strong className="text-text-primary bg-main/10 px-1">誰もが心地よく</strong> 過ごせること。
                         </p>
                     </div>
                 </div>
@@ -369,7 +377,14 @@ function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: 
     };
 
     return (
-        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group" onClick={handleJoin}>
+        <article
+            className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[60%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(242,128,191,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(242,128,191,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-main"
+            role="button"
+            tabIndex={0}
+            onClick={handleJoin}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleJoin(); } }}
+            aria-label={`${event.name}の詳細および参加ページを開く`}
+        >
             <div className="h-[40%] md:h-[45%] bg-bg-sub relative border-b-2 border-text-primary overflow-hidden shrink-0">
                 {event.imageURL ? (
                     <img src={event.imageURL} alt={event.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -388,19 +403,21 @@ function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: 
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         {organizer && (
-                            <div
-                                className="flex items-center gap-2 cursor-pointer group/user shrink-0"
+                            <button
+                                type="button"
+                                className="flex items-center gap-2 cursor-pointer group/user shrink-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-main p-1 rounded -m-1 relative z-10"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUserClick(organizer); }}
+                                aria-label={`${organizer.username}のプロフィールを見る`}
                             >
                                 {organizer.photoURL ? (
-                                    <img src={organizer.photoURL} alt={organizer.username} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
+                                    <img src={organizer.photoURL} alt={`${organizer.username}のアイコン`} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
                                 ) : (
-                                    <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]">
+                                    <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]" aria-hidden="true">
                                         {organizer.username[0]?.toUpperCase()}
                                     </div>
                                 )}
                                 <span className="text-xs font-bold text-text-primary group-hover/user:text-main group-hover/user:underline transition-colors truncate max-w-[80px] md:max-w-[120px]">{organizer.username}</span>
-                            </div>
+                            </button>
                         )}
                         <span className="text-xs font-bold text-main ml-auto shrink-0">
                             {event.startDate ? format(event.startDate.toDate(), "yyyy.MM.dd HH:mm") : ""}
@@ -409,11 +426,21 @@ function EventCard({ event, onUserClick }: { event: EventType, onUserClick: (u: 
                     <h3 className="text-base font-bold mb-2 text-text-primary group-hover:text-main transition-colors leading-tight">
                         {event.name}
                     </h3>
+                    {event.tags && event.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                            {event.tags.map((tag, i) => (
+                                <span key={i} className="text-[10px] bg-bg-sub border border-text-primary px-1.5 py-0.5 font-bold flex items-center gap-1 shrink-0" title={tag}>
+                                    <span>{TAG_EMOJIS[tag] || "🏷️"}</span>
+                                    <span className="hidden md:inline">{tag}</span>
+                                </span>
+                            ))}
+                        </div>
+                    )}
                     <div className="text-xs text-text-secondary truncate-multiline line-clamp-2 md:line-clamp-3 mb-2" dangerouslySetInnerHTML={{ __html: event.description || '' }}>
                     </div>
                 </div>
                 <div className="pt-3 border-t-2 border-gray-100 mt-2 shrink-0">
-                    <button className="text-sm font-bold text-main border-2 border-main px-4 py-2 hover:bg-main hover:text-white transition-all w-full cursor-pointer active:scale-95">JOIN</button>
+                    <div aria-hidden="true" className="text-center text-sm font-bold text-main border-2 border-main px-4 py-2 group-hover:bg-main group-hover:text-white transition-all w-full select-none">JOIN</div>
                 </div>
             </div>
         </article>
@@ -428,7 +455,7 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
     const plainDesc = item.description.replace(/<[^>]+>/g, '').substring(0, 80) + "...";
 
     return (
-        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-4/5 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group">
+        <a href={item.link} target="_blank" rel="noopener noreferrer" className="min-w-[85vw] md:min-w-[35vh] w-[85vw] md:w-auto h-[75%] md:h-[55%] md:aspect-4/5 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[6px_6px_0_0_rgba(51,51,200,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(51,51,200,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500 relative">
             <div className="h-[30%] md:h-[35%] bg-blue-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-blue-200 font-bold text-2xl group-hover:opacity-90 transition-opacity">
                 {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
@@ -439,19 +466,21 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
             <div className="p-4 md:p-5 flex-1 flex flex-col overflow-y-auto">
                 <div className="flex items-center gap-2 mb-2">
                     {item.userProfile ? (
-                        <div
-                            className="flex items-center gap-2 cursor-pointer group/user shrink-0"
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 cursor-pointer group/user shrink-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 p-1 rounded -m-1 relative z-10"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUserClick(item.userProfile!); }}
+                            aria-label={`${item.userProfile.username}のプロフィールを見る`}
                         >
                             {item.userProfile.photoURL ? (
-                                <img src={item.userProfile.photoURL} alt={item.userProfile.username} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
+                                <img src={item.userProfile.photoURL} alt={`${item.userProfile.username}のアイコン`} className="w-6 h-6 rounded-full border border-text-primary object-cover group-hover/user:scale-110 transition-transform" />
                             ) : (
-                                <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]">
+                                <div className="w-6 h-6 rounded-full border border-text-primary bg-main/20 flex items-center justify-center text-main font-bold text-[10px]" aria-hidden="true">
                                     {item.userProfile.username[0]?.toUpperCase()}
                                 </div>
                             )}
                             <span className="text-xs font-bold text-text-primary group-hover/user:text-main group-hover/user:underline transition-colors truncate max-w-[80px] md:max-w-[120px]">{item.userProfile.username}</span>
-                        </div>
+                        </button>
                     ) : (
                         <span className="text-[10px] font-bold border border-text-primary text-blue-900 bg-white px-2 py-0.5 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">{item.author}</span>
                     )}
@@ -473,36 +502,15 @@ function NewsCard({ item, index, onUserClick }: { item: RssItem, index: number, 
     );
 }
 
-function TeamCard({ index }: { index: number }) {
-    return (
-        <article className="min-w-[80vw] md:min-w-[30vh] w-[80vw] md:w-auto h-[75%] md:h-[50%] md:aspect-3/4 snap-center bg-white border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] md:shadow-[6px_6px_0_0_rgba(51,51,51,1)] hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] md:hover:shadow-[10px_10px_0_0_rgba(50,200,100,0.5)] transition-all duration-300 flex flex-col overflow-hidden shrink-0 hover:-translate-y-1 md:hover:-translate-y-2">
-            <div className="h-[25%] md:h-[30%] bg-green-50 relative border-b-2 border-text-primary overflow-hidden shrink-0 flex items-center justify-center text-green-200 font-bold text-2xl">
-                TEAM
-            </div>
-            <div className="p-4 flex-1 flex flex-col items-center text-center overflow-y-auto">
-                <div className="w-14 h-14 rounded-full border-2 border-text-primary bg-white -mt-10 mb-2 z-10 flex items-center justify-center text-lg font-bold text-main shadow-md shrink-0">
-                    T{index}
-                </div>
-                <h3 className="text-base font-bold mb-1 text-text-primary">Design Team {index}</h3>
-                <p className="text-xs text-text-secondary mb-3">Creative Design & Art</p>
-                <div className="flex gap-1 justify-center mb-4 flex-1 items-end shrink-0">
-                    {[1, 2, 3].map(i => <div key={i} className="w-5 h-5 rounded-full bg-gray-200 border border-text-primary"></div>)}
-                </div>
-                <button className="mt-auto px-6 py-2 bg-text-primary text-white text-xs font-bold hover:bg-main transition-colors w-full shrink-0">
-                    VIEW TEAM
-                </button>
-            </div>
-        </article>
-    );
-}
+
 
 function ViewAllCard() {
     return (
-        <div className="min-w-[50vw] md:min-w-[20vh] w-[50vw] md:w-auto h-[80%] md:h-[50%] md:aspect-2/3 snap-center flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300">
+        <button type="button" className="min-w-[50vw] md:min-w-[20vh] w-[50vw] md:w-auto h-[80%] md:h-[50%] md:aspect-2/3 snap-center flex flex-col items-center justify-center text-text-secondary hover:text-main cursor-pointer group shrink-0 hover:scale-105 transition-transform duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-main">
             <div className="w-16 h-16 border-2 border-current flex items-center justify-center mb-4 group-hover:bg-white transition-colors bg-bg-sub shadow-[4px_4px_0_0_rgba(51,51,51,1)]">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" aria-hidden="true" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </div>
             <span className="font-bold tracking-widest border-b-2 border-transparent group-hover:border-main text-base">VIEW ALL</span>
-        </div>
+        </button>
     );
 }

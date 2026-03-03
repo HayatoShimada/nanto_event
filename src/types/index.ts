@@ -23,6 +23,8 @@ export interface UserProfile {
   photoURL: string | null;
   snsAccounts?: string[]; // 最大3つまで
   noteUrl?: string; // RSS取得用
+  interests?: string[]; // 興味のあること
+  transmissions?: string[]; // 発信したいこと
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -35,12 +37,13 @@ export interface Event {
   location: string;
   imageURL: string | null;
   categories: EventCategory[];
+  tags?: string[]; // 最大2つ
   startDate: Timestamp;
   finishDate: Timestamp;
   organizerUid: string;
+  organizerType?: "user" | "team"; // 主催者タイプ
   emailNotification: boolean;
   recruitmentUrl?: string; // 外部募集用URL
-  pageViews?: number; // 閲覧数
   participationClicks?: number; // 参加ボタンクリック数
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -65,6 +68,9 @@ export interface Team {
   description: string;
   members: string[]; // User IDs
   imageURL: string | null;
+  snsAccounts?: string[];
+  interests?: string[];
+  transmissions?: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

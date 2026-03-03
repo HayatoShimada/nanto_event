@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { getOrganizedEvents, getUpcomingEvents, incrementParticipationClick } from "@/lib/firebase/firestore";
-import type { Event as EventType } from "@/types";
+import { getOrganizedEvents, getUpcomingEvents, incrementParticipationClick, getUserTeams } from "@/lib/firebase/firestore";
+import type { Event as EventType, Team as TeamType } from "@/types";
 import { format } from "date-fns";
 
 export default function MyPage() {
@@ -16,6 +16,8 @@ export default function MyPage() {
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [ongoingEvents, setOngoingEvents] = useState<EventType[]>([]);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
+  const [teams, setTeams] = useState<TeamType[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,6 +40,15 @@ export default function MyPage() {
         console.error("Failed to load ongoing events:", err);
         setLoadingOngoing(false);
       });
+
+      setLoadingTeams(true);
+      getUserTeams(user.uid).then(teamsData => {
+        setTeams(teamsData);
+        setLoadingTeams(false);
+      }).catch(err => {
+        console.error("Failed to load teams:", err);
+        setLoadingTeams(false);
+      });
     }
   }, [user, profile, loading, router]);
 
@@ -53,8 +64,8 @@ export default function MyPage() {
     <div className="h-dvh w-screen flex flex-col bg-bg-main overflow-hidden text-text-primary font-sans">
       <Header />
 
-      <main className="flex-1 w-full flex flex-col md:flex-row items-start justify-center p-4 py-8 pt-[calc(4rem+env(safe-area-inset-top))] gap-8 overflow-y-auto">
-        <div className="flex flex-col gap-8 w-full max-w-md shrink-0">
+      <main className="flex-1 w-full flex flex-col md:flex-row items-center md:items-start md:justify-center p-4 py-8 pt-[calc(5rem+env(safe-area-inset-top))] gap-8 overflow-y-auto">
+        <div className="flex flex-col gap-8 w-full max-w-md shrink-0 mt-4 md:mt-0">
           {/* Profile Card */}
           <div className="w-full bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-8 flex flex-col items-center relative">
 
@@ -136,7 +147,6 @@ export default function MyPage() {
 
                     <div className="flex justify-between items-end mt-2">
                       <div className="flex gap-4 text-xs font-bold text-text-secondary">
-                        <span className="flex items-center gap-1">👀 <span className="text-main font-mono">{event.pageViews || 0}</span></span>
                         <span className="flex items-center gap-1">🖱️ <span className="text-main font-mono">{event.participationClicks || 0}</span></span>
                       </div>
                       <Link href={`/events/edit?id=${event.id}`} className="text-sm bg-text-primary text-white px-5 py-2 font-bold hover:opacity-80 transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_rgba(51,51,51,1)]">
@@ -151,6 +161,43 @@ export default function MyPage() {
                 まだ主催イベントがありません。
               </div>
             )}
+          </div>
+
+          {/* Teams Dashboard */}
+          <div className="w-full max-w-md bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-6 md:p-8 flex flex-col relative">
+            <h2 className="text-xl font-bold mb-4 tracking-widest text-main border-b-2 border-main pb-2">YOUR TEAMS</h2>
+
+            {loadingTeams ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-main" />
+              </div>
+            ) : teams.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {teams.map(team => (
+                  <div key={team.id} className="border-2 border-text-primary p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-sm leading-tight text-text-primary">{team.name}</h3>
+                      <Link href={`/teams/${team.id}`} className="text-[10px] items-center px-2 py-0.5 font-bold bg-main/10 text-main border border-main shrink-0">
+                        VIEW
+                      </Link>
+                    </div>
+                    <div className="mt-2 text-right">
+                      <Link href={`/teams/edit?id=${team.id}`} className="text-sm bg-text-primary text-white px-5 py-2 font-bold hover:opacity-80 transition-all active:scale-95 inline-block shadow-[2px_2px_0_0_rgba(51,51,51,1)]">
+                        EDIT
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm font-bold text-text-secondary bg-gray-50 border-2 border-dashed border-gray-300">
+                まだ所属チームがありません。
+              </div>
+            )}
+
+            <Link href="/teams/create" className="mt-6 w-full bg-white text-main font-bold py-2 text-sm text-center border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] hover:shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:shadow-none transition-all">
+              CREATE TEAM
+            </Link>
           </div>
         </div>
 

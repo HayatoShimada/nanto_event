@@ -80,3 +80,22 @@ export async function deleteNewsThumbnail(newsId: string): Promise<void> {
   const list = await listAll(folderRef);
   await Promise.all(list.items.map((item) => deleteObject(item)));
 }
+
+// ----- チームイメージ画像 -----
+
+export async function uploadTeamImage(
+  teamId: string,
+  file: File
+): Promise<string> {
+  validateFile(file);
+  const ext = getExtension(file);
+  const storageRef = ref(storage, `teams/${teamId}/image.${ext}`);
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  return getDownloadURL(storageRef);
+}
+
+export async function deleteTeamImage(teamId: string): Promise<void> {
+  const folderRef = ref(storage, `teams/${teamId}`);
+  const list = await listAll(folderRef);
+  await Promise.all(list.items.map((item) => deleteObject(item)));
+}

@@ -5,13 +5,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getEvent, updateEvent, deleteEvent } from "@/lib/firebase/firestore";
+import { getEvent, updateEvent, deleteEvent, getUserTeams } from "@/lib/firebase/firestore";
 import { uploadEventImage, deleteEventImage } from "@/lib/firebase/storage";
 import Header from "@/components/Header";
 import Editor from "@/components/Editor";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Event as EventType } from "@/types";
+import type { Event as EventType, Team } from "@/types";
+import { EVENT_TAGS } from "@/constants/tags";
 
 const schema = z.object({
   name: z.string().min(1, "イベント名は必須です"),
@@ -21,6 +22,9 @@ const schema = z.object({
   categories: z.string().min(1, "カテゴリは少なくとも1つ必要です"),
   description: z.string().optional(),
   recruitmentUrl: z.string().optional(),
+  tags: z.array(z.string()).max(2, "タグは最大2つまで選択できます").optional(),
+  organizerType: z.enum(["user", "team"]).optional(),
+  teamId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,6 +37,7 @@ export default function ClientPage() {
   const [currentImageURL, setCurrentImageURL] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState<Team[]>([]);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -41,10 +46,17 @@ export default function ClientPage() {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  useEffect(() => {
+    if (user) {
+      getUserTeams(user.uid).then(setTeams).catch(console.error);
+    }
+  }, [user]);
 
   useEffect(() => {
     async function loadEvent() {
@@ -69,6 +81,11 @@ export default function ClientPage() {
       setValue("categories", eventData.categories.join(", "));
       setValue("description", eventData.description);
       setValue("recruitmentUrl", eventData.recruitmentUrl || "");
+      setValue("tags", eventData.tags || []);
+      setValue("organizerType", eventData.organizerType || "user");
+      if (eventData.organizerType === "team") {
+        setValue("teamId", eventData.organizerUid);
+      }
       setCurrentImageURL(eventData.imageURL);
 
       setLoading(false);
@@ -106,7 +123,10 @@ export default function ClientPage() {
         categories: data.categories.split(",").map((s) => s.trim()) as any[],
         description: data.description || "",
         recruitmentUrl: data.recruitmentUrl || "",
+        tags: data.tags || [],
         imageURL: imageURL,
+        organizerUid: data.organizerType === "team" && data.teamId ? data.teamId : user.uid,
+        organizerType: data.organizerType || "user",
       });
 
       alert("イベントを更新しました");
@@ -162,6 +182,30 @@ export default function ClientPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)]">
 
+          {/* Organizer */}
+          <div>
+            <label className="block text-sm font-bold mb-1">ORGANIZER</label>
+            <div className="flex gap-4 mb-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value="user" {...register("organizerType")} className="accent-main" />
+                個人として主催
+              </label>
+              {teams.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" value="team" {...register("organizerType")} className="accent-main" />
+                  チームとして主催
+                </label>
+              )}
+            </div>
+            {watch("organizerType") === "team" && (
+              <select {...register("teamId")} className="w-full border-2 border-text-primary p-2 focus:ring-2 focus:ring-main focus:outline-none mb-2">
+                <option value="">チームを選択してください</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+            {errors.organizerType && <p className="text-red-500 text-xs mt-1">{errors.organizerType.message}</p>}
+          </div>
+
           {/* Event Name */}
           <div>
             <label className="block text-sm font-bold mb-1">EVENT NAME</label>
@@ -215,6 +259,25 @@ export default function ClientPage() {
               className="w-full border-2 border-text-primary p-2 rounded-sm focus:ring-2 focus:ring-main focus:outline-none"
             />
             {errors.categories && <p className="text-red-500 text-xs mt-1">{errors.categories.message}</p>}
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-bold mb-1">TAGS (Max 2)</label>
+            <div className="flex flex-wrap gap-2">
+              {EVENT_TAGS.map((tag) => (
+                <label key={`tag-${tag}`} className="flex items-center gap-1 text-sm bg-bg-sub/30 px-2 py-1 border border-text-primary/20 rounded cursor-pointer hover:bg-main/10 transition-colors">
+                  <input
+                    type="checkbox"
+                    value={tag}
+                    {...register("tags")}
+                    className="accent-main"
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
+            {errors.tags && <p className="text-red-500 text-xs mt-1">{errors.tags.message}</p>}
           </div>
 
           {/* Recruitment URL */}

@@ -20,6 +20,7 @@ import type {
   EventCollaborator,
   EventParticipation,
   News,
+  Team,
 } from "@/types";
 
 // ----- イベント CRUD -----
@@ -62,24 +63,17 @@ export async function getOrganizedEvents(uid: string): Promise<Event[]> {
 }
 
 export async function createEvent(
-  data: Omit<Event, "id" | "createdAt" | "updatedAt" | "pageViews" | "participationClicks"> & { recruitmentUrl?: string }
+  data: Omit<Event, "id" | "createdAt" | "updatedAt" | "participationClicks"> & { recruitmentUrl?: string }
 ): Promise<string> {
   const now = Timestamp.now();
   const ref = await addDoc(collection(db, "events"), {
     ...data,
     recruitmentUrl: data.recruitmentUrl || "",
-    pageViews: 0,
     participationClicks: 0,
     createdAt: now,
     updatedAt: now,
   });
   return ref.id;
-}
-
-export async function incrementEventPageView(eventId: string): Promise<void> {
-  await updateDoc(doc(db, "events", eventId), {
-    pageViews: increment(1)
-  });
 }
 
 export async function incrementParticipationClick(eventId: string): Promise<void> {
@@ -256,4 +250,47 @@ export async function cancelParticipation(
     status: "cancelled",
     cancelledAt: Timestamp.now(),
   });
+}
+
+// ----- チーム -----
+
+export async function createTeam(
+  data: Omit<Team, "id" | "createdAt" | "updatedAt">
+): Promise<string> {
+  const now = Timestamp.now();
+  const ref = await addDoc(collection(db, "teams"), {
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function updateTeam(
+  teamId: string,
+  data: Partial<Team>
+): Promise<void> {
+  await updateDoc(doc(db, "teams", teamId), {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function deleteTeam(teamId: string): Promise<void> {
+  await deleteDoc(doc(db, "teams", teamId));
+}
+
+export async function getTeam(teamId: string): Promise<Team | null> {
+  const snap = await getDoc(doc(db, "teams", teamId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as Team;
+}
+
+export async function getUserTeams(userId: string): Promise<Team[]> {
+  const q = query(
+    collection(db, "teams"),
+    where("members", "array-contains", userId)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Team);
 }

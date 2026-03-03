@@ -10,6 +10,7 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Header from "@/components/Header";
 import Link from "next/link";
+import { USER_TAGS } from "@/constants/tags";
 
 const schema = z.object({
   username: z.string().min(1, "ユーザー名は必須です"),
@@ -19,6 +20,8 @@ const schema = z.object({
   sns2: z.string().optional(),
   sns3: z.string().optional(),
   noteUrl: z.string().optional(),
+  interests: z.array(z.string()).optional(),
+  transmissions: z.array(z.string()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -49,6 +52,8 @@ export default function EditProfilePage() {
       setValue("sns2", profile.snsAccounts?.[1] || "");
       setValue("sns3", profile.snsAccounts?.[2] || "");
       setValue("noteUrl", profile.noteUrl || "");
+      setValue("interests", profile.interests || []);
+      setValue("transmissions", profile.transmissions || []);
     }
   }, [user, loading, router, profile, setValue]);
 
@@ -63,6 +68,8 @@ export default function EditProfilePage() {
         address: data.address || "",
         snsAccounts: [data.sns1, data.sns2, data.sns3].filter((s): s is string => !!s && s.trim() !== ""),
         noteUrl: data.noteUrl || "",
+        interests: data.interests || [],
+        transmissions: data.transmissions || [],
         updatedAt: serverTimestamp(),
       });
       router.push("/mypage");
@@ -75,20 +82,20 @@ export default function EditProfilePage() {
   };
 
   if (loading || !profile) {
-      return (
-          <div className="h-dvh w-full flex items-center justify-center bg-bg-main">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-main" />
-          </div>
-      );
+    return (
+      <div className="h-dvh w-full flex items-center justify-center bg-bg-main">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-main" />
+      </div>
+    );
   }
 
   return (
     <div className="h-dvh w-screen flex flex-col bg-bg-main overflow-hidden text-text-primary font-sans">
       <Header />
-      
-      <main className="flex-1 w-full flex items-center justify-center p-4 pt-[calc(4rem+env(safe-area-inset-top))] overflow-y-auto">
-        <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-8 flex flex-col gap-6 relative">
-          
+
+      <main className="flex-1 w-full flex items-center justify-center p-4 pt-[calc(4rem+env(safe-area-inset-top))] md:pt-24 pb-20 overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-6 md:p-8 flex flex-col gap-6 relative my-8">
+
           <h1 className="text-2xl font-bold tracking-widest text-center text-main border-b-2 border-main pb-2">EDIT PROFILE</h1>
 
           {/* Username */}
@@ -144,26 +151,62 @@ export default function EditProfilePage() {
 
           {/* Note URL */}
           <div className="flex flex-col gap-2">
-             <label className="text-sm font-bold">NOTE URL (RSS)</label>
-             <input 
-               {...register("noteUrl")}
-               className="w-full p-2 border-2 border-text-primary/20 focus:border-main outline-none bg-bg-sub/30 transition-colors"
-               placeholder="https://note.com/your_id"
-             />
-             <p className="text-[10px] text-text-secondary">noteのトップページURLを入力すると自動でRSSを取得します</p>
+            <label className="text-sm font-bold">NOTE URL (RSS)</label>
+            <input
+              {...register("noteUrl")}
+              className="w-full p-2 border-2 border-text-primary/20 focus:border-main outline-none bg-bg-sub/30 transition-colors"
+              placeholder="https://note.com/your_id"
+            />
+            <p className="text-[10px] text-text-secondary">noteのトップページURLを入力すると自動でRSSを取得します</p>
+          </div>
+
+          {/* Interests */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-bold">興味のあること (複数選択可)</label>
+            <div className="flex flex-wrap gap-2">
+              {USER_TAGS.map((tag) => (
+                <label key={`interest-${tag}`} className="flex items-center gap-1 text-sm bg-bg-sub/30 px-2 py-1 border border-text-primary/20 rounded cursor-pointer hover:bg-main/10 transition-colors">
+                  <input
+                    type="checkbox"
+                    value={tag}
+                    {...register("interests")}
+                    className="accent-main"
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Transmissions */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-bold">発信したいこと (複数選択可)</label>
+            <div className="flex flex-wrap gap-2">
+              {USER_TAGS.map((tag) => (
+                <label key={`transmission-${tag}`} className="flex items-center gap-1 text-sm bg-bg-sub/30 px-2 py-1 border border-text-primary/20 rounded cursor-pointer hover:bg-main/10 transition-colors">
+                  <input
+                    type="checkbox"
+                    value={tag}
+                    {...register("transmissions")}
+                    className="accent-main"
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-4 mt-4">
-             <Link href="/mypage" className="flex-1 py-3 text-center border-2 border-text-primary font-bold hover:bg-gray-100 transition-colors flex items-center justify-center">
-               CANCEL
-             </Link>
-             <button
-               type="submit"
-               disabled={isSubmitting}
-               className="flex-1 py-3 bg-main text-white font-bold border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               {isSubmitting ? "SAVING..." : "SAVE"}
-             </button>
+            <Link href="/mypage" className="flex-1 py-3 text-center border-2 border-text-primary font-bold hover:bg-gray-100 transition-colors flex items-center justify-center">
+              CANCEL
+            </Link>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 py-3 bg-main text-white font-bold border-2 border-text-primary shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "SAVING..." : "SAVE"}
+            </button>
           </div>
 
         </form>

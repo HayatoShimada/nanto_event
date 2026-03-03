@@ -39,7 +39,10 @@ export default function LoginPage() {
             <div className="absolute bottom-0 left-0 w-[50vh] h-[50vh] bg-bg-sub/50 rounded-full blur-3xl -ml-20 -mb-20"></div>
 
             <div className="bg-white p-12 w-[400px] border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] relative z-10 flex flex-col items-center">
-                <h1 className="text-3xl font-bold text-main mb-8 tracking-widest">NANTS</h1>
+                <div className="flex items-center gap-2 mb-8 mt-4">
+                    <h1 className="text-3xl font-bold text-main tracking-widest">NANTS</h1>
+                    <span className="text-xs font-bold bg-main text-white px-2 py-0.5 rounded-sm tracking-widest mt-1">BETA</span>
+                </div>
 
                 <p className="text-text-secondary mb-8 text-center text-sm">
                     コミュニティに参加して、<br />
