@@ -66,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           postalcode: data.postalcode || "",
           address: data.address || "",
           photoURL: data.photoURL || null,
+          followingUsers: data.followingUsers || [],
+          defaultTags: data.defaultTags || [],
           createdAt: data.createdAt, // Timestamps are handled by Firestore SDK
           updatedAt: data.updatedAt,
         } as UserProfile);

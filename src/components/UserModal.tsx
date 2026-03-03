@@ -1,4 +1,6 @@
 import { UserProfile } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { updateUserProfile } from "@/lib/firebase/firestore";
 
 interface UserModalProps {
     user: UserProfile;
@@ -6,6 +8,32 @@ interface UserModalProps {
 }
 
 export default function UserModal({ user, onClose }: UserModalProps) {
+    const { profile, user: authUser } = useAuth();
+
+    const currentFollowing = profile?.followingUsers || [];
+    const isFollowing = currentFollowing.includes(user.uid);
+
+    const handleFollow = async () => {
+        if (!authUser || !profile) return;
+
+        let newFollowing;
+        if (isFollowing) {
+            newFollowing = currentFollowing.filter(uid => uid !== user.uid);
+        } else {
+            newFollowing = [...currentFollowing, user.uid];
+        }
+
+        try {
+            await updateUserProfile(authUser.uid, { followingUsers: newFollowing });
+            alert(isFollowing ? `${user.username}のフォローを解除しました` : `${user.username}をフォローしました！`);
+            // ここでは簡易的にリロードで反映（本格的にはContext等で状態管理）
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            alert("エラーが発生しました");
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
             <div
@@ -37,6 +65,16 @@ export default function UserModal({ user, onClose }: UserModalProps) {
                 <div className="p-6 pt-4 flex flex-col items-center w-full z-10 bg-white">
                     <h2 className="text-2xl font-bold mb-1 text-center truncate w-full">{user.username}</h2>
                     <span className="text-xs font-bold text-main border border-main px-2 py-0.5 mb-4">{user.role.toUpperCase()}</span>
+
+                    {/* Follow Button */}
+                    {authUser && profile?.uid !== user.uid && (
+                        <button
+                            onClick={handleFollow}
+                            className={`mb-4 px-4 py-1.5 text-sm font-bold border-2 border-text-primary shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all ${isFollowing ? 'bg-white text-black' : 'bg-black text-white'}`}
+                        >
+                            {isFollowing ? 'フォロー解除' : 'フォローする'}
+                        </button>
+                    )}
 
                     {user.snsAccounts && user.snsAccounts.length > 0 ? (
                         <div className="w-full flex justify-center gap-3">

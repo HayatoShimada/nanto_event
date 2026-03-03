@@ -11,7 +11,8 @@ import { format } from 'date-fns';
 import type { Event as EventType, UserProfile } from '@/types';
 import { incrementParticipationClick, getUserProfile } from '@/lib/firebase/firestore';
 import UserModal from '@/components/UserModal';
-import { TAG_EMOJIS } from '@/constants/tags';
+import { TAG_EMOJIS, USER_TAGS } from '@/constants/tags';
+import { updateUserProfile } from '@/lib/firebase/firestore';
 
 interface RssItem {
     title: string;
@@ -24,12 +25,13 @@ interface RssItem {
 }
 
 export default function Home() {
-    const { user, logout } = useAuth();
+    const { user, profile, logout } = useAuth();
     const [newsItems, setNewsItems] = useState<RssItem[]>([]);
     const [loadingNews, setLoadingNews] = useState(true);
     const [events, setEvents] = useState<EventType[]>([]);
     const [loadingEvents, setLoadingEvents] = useState(true);
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [selectedTag, setSelectedTag] = useState<string>("ALL");
 
     useEffect(() => {
         const fetchNoteRss = async () => {
@@ -115,10 +117,18 @@ export default function Home() {
         };
 
         const fetchEvents = async () => {
+            setLoadingEvents(true);
             try {
-                const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(10)));
-                const fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
-                setEvents(fetchedEvents);
+                // Fetch upcoming events
+                const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(50)));
+                let fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
+
+                // Memory filter by selectedTag
+                if (selectedTag !== "ALL") {
+                    fetchedEvents = fetchedEvents.filter(e => e.tags && e.tags.includes(selectedTag));
+                }
+
+                setEvents(fetchedEvents.slice(0, 10)); // Display up to 10
             } catch (error) {
                 console.error("Failed to fetch events:", error);
             } finally {
@@ -128,7 +138,29 @@ export default function Home() {
 
         fetchNoteRss();
         fetchEvents();
-    }, []);
+    }, [selectedTag]);
+
+    const handleSetDefaultTag = async () => {
+        if (!user || !profile || selectedTag === "ALL") return;
+        const currentDefaults = profile.defaultTags || [];
+        const isDefault = currentDefaults.includes(selectedTag);
+
+        let newDefaults;
+        if (isDefault) {
+            newDefaults = currentDefaults.filter((t: string) => t !== selectedTag);
+        } else {
+            newDefaults = [...currentDefaults, selectedTag];
+        }
+
+        try {
+            await updateUserProfile(user.uid, { defaultTags: newDefaults });
+            alert(isDefault ? `${selectedTag}をデフォルトタグから解除しました` : `${selectedTag}をデフォルトタグに設定しました！`);
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました");
+        }
+    };
 
     return (
         <div className="flex h-dvh w-full bg-bg-main overflow-hidden font-sans flex-col md:flex-row pb-[env(safe-area-inset-bottom)]">
@@ -183,16 +215,47 @@ export default function Home() {
                             </div>
                         </Link>
                     )}
-                    <div className="flex gap-2 justify-center mt-4 mb-2 text-[10px] text-text-secondary font-bold tracking-wider opacity-60 hover:opacity-100 transition-opacity">
-                        <Link href="/privacy" className="hover:text-main hover:underline">PRIVACY</Link>
-                        <span>|</span>
-                        <Link href="/terms" className="hover:text-main hover:underline">TERMS</Link>
+                    {/* Footer Links */}
+                    <div className="mt-auto pt-8 flex flex-col gap-2 text-[10px] sm:text-xs font-bold text-text-secondary">
+                        <Link href="/community" className="hover:text-main hover:underline w-fit">COMMUNITY</Link>
+                        <Link href="/privacy" className="hover:text-main hover:underline w-fit">PRIVACY</Link>
+                        <Link href="/terms" className="hover:text-main hover:underline w-fit">TERMS</Link>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content Area - Vertical Scroll with Snap (Mobile) / Normal Flow (PC) */}
-            <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory md:snap-none hide-scrollbar pt-0 pb-0 md:pt-0 md:pb-0">
+            <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory md:snap-none hide-scrollbar pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] scroll-pt-[calc(6.5rem+env(safe-area-inset-top))] md:pt-0 md:pb-0 md:scroll-pt-0 relative">
+
+                {/* Tag Selector Bar (Sticky Top) */}
+                <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-40 bg-bg-main border-b-2 border-text-primary px-4 py-2 flex items-start justify-between">
+                    <div className="flex-1 flex flex-wrap gap-2">
+                        <button
+                            onClick={() => setSelectedTag("ALL")}
+                            className={`shrink-0 px-4 py-1 text-sm font-bold border-2 border-text-primary snap-start transition-colors ${selectedTag === "ALL" ? 'bg-main text-white' : 'bg-white text-text-primary hover:bg-gray-100'}`}
+                        >
+                            ALL
+                        </button>
+                        {USER_TAGS.map(tag => (
+                            <button
+                                key={tag}
+                                onClick={() => setSelectedTag(tag)}
+                                className={`shrink-0 px-4 py-1 text-sm font-bold border-2 border-text-primary snap-start transition-colors flex items-center gap-1 ${selectedTag === tag ? 'bg-main text-white' : 'bg-white text-text-primary hover:bg-gray-100'}`}
+                            >
+                                <span>{TAG_EMOJIS[tag]}</span>
+                                <span>{tag}</span>
+                            </button>
+                        ))}
+                    </div>
+                    {selectedTag !== "ALL" && user && profile && (
+                        <button
+                            onClick={handleSetDefaultTag}
+                            className={`ml-4 shrink-0 px-3 py-1 text-xs font-bold border-2 border-text-primary ${profile.defaultTags?.includes(selectedTag) ? 'bg-white text-black' : 'bg-black text-white'} shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all`}
+                        >
+                            {profile.defaultTags?.includes(selectedTag) ? 'デフォルト解除' : 'デフォルトタグに設定'}
+                        </button>
+                    )}
+                </div>
 
                 {/* Section: ALL & CONCEPT */}
                 <Section id="all" title="" showPrevHint={false} showNextHint={true}>

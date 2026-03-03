@@ -67,10 +67,12 @@ export default function MenuOverlay({ isOpen, onClose }: MenuOverlayProps) {
                 )}
             </nav>
 
-            <div className="absolute bottom-8 text-xs text-text-secondary font-bold tracking-widest flex gap-4">
-                <Link href="/privacy" onClick={onClose}>PRIVACY</Link>
-                <span>|</span>
-                <Link href="/terms" onClick={onClose}>TERMS</Link>
+            <div className="absolute bottom-6 w-full px-4 text-[10px] sm:text-xs text-text-secondary font-bold tracking-widest flex flex-wrap justify-center items-center gap-x-3 gap-y-2">
+                <Link href="/community" onClick={onClose} className="hover:text-main">COMMUNITY</Link>
+                <span className="hidden sm:inline">|</span>
+                <Link href="/privacy" onClick={onClose} className="hover:text-main">PRIVACY</Link>
+                <span className="hidden sm:inline">|</span>
+                <Link href="/terms" onClick={onClose} className="hover:text-main">TERMS</Link>
             </div>
         </div>
     );

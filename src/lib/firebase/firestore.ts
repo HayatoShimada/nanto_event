@@ -5,6 +5,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  setDoc,
   deleteDoc,
   query,
   where,
@@ -150,14 +151,28 @@ export async function getUserProfile(
   return { uid: snap.id, ...snap.data() } as UserProfile;
 }
 
+export async function getUsersByUids(uids: string[]): Promise<UserProfile[]> {
+  if (!uids || uids.length === 0) return [];
+  // For simplicity and to avoid the 'in' query limit of 10, use Promise.all
+  const promises = uids.map(uid => getDoc(doc(db, "users", uid)));
+  const snaps = await Promise.all(promises);
+  const users: UserProfile[] = [];
+  snaps.forEach(snap => {
+    if (snap.exists()) {
+      users.push({ uid: snap.id, ...snap.data() } as UserProfile);
+    }
+  });
+  return users;
+}
+
 export async function updateUserProfile(
   uid: string,
   data: Partial<UserProfile>
 ): Promise<void> {
-  await updateDoc(doc(db, "users", uid), {
+  await setDoc(doc(db, "users", uid), {
     ...data,
     updatedAt: Timestamp.now(),
-  });
+  }, { merge: true });
 }
 
 export async function getCollaborators(): Promise<UserProfile[]> {

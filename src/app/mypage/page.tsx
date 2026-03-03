@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { getOrganizedEvents, getUpcomingEvents, incrementParticipationClick, getUserTeams } from "@/lib/firebase/firestore";
-import type { Event as EventType, Team as TeamType } from "@/types";
+import { getOrganizedEvents, getUpcomingEvents, incrementParticipationClick, getUserTeams, getUsersByUids } from "@/lib/firebase/firestore";
+import type { Event as EventType, Team as TeamType, UserProfile } from "@/types";
 import { format } from "date-fns";
+import UserModal from "@/components/UserModal";
 
 export default function MyPage() {
   const { user, profile, loading } = useAuth();
@@ -18,6 +19,9 @@ export default function MyPage() {
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [teams, setTeams] = useState<TeamType[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
+  const [followingUsersProfiles, setFollowingUsersProfiles] = useState<UserProfile[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -49,6 +53,19 @@ export default function MyPage() {
         console.error("Failed to load teams:", err);
         setLoadingTeams(false);
       });
+
+      if (profile.followingUsers && profile.followingUsers.length > 0) {
+        setLoadingFollowing(true);
+        getUsersByUids(profile.followingUsers).then(usersData => {
+          setFollowingUsersProfiles(usersData);
+          setLoadingFollowing(false);
+        }).catch(err => {
+          console.error("Failed to load following users:", err);
+          setLoadingFollowing(false);
+        });
+      } else {
+        setFollowingUsersProfiles([]);
+      }
     }
   }, [user, profile, loading, router]);
 
@@ -199,6 +216,39 @@ export default function MyPage() {
               CREATE TEAM
             </Link>
           </div>
+
+          {/* Following Dashboard */}
+          <div className="w-full max-w-md bg-white border-2 border-text-primary shadow-[8px_8px_0_0_rgba(51,51,51,1)] p-6 md:p-8 flex flex-col relative">
+            <h2 className="text-xl font-bold mb-4 tracking-widest text-main border-b-2 border-main pb-2">FOLLOWING USERS</h2>
+
+            {loadingFollowing ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-main" />
+              </div>
+            ) : followingUsersProfiles.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {followingUsersProfiles.map(u => (
+                  <div key={u.uid} onClick={() => setSelectedUser(u)} className="cursor-pointer border-2 border-text-primary p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                    {u.photoURL ? (
+                      <img src={u.photoURL} alt={u.username} className="w-12 h-12 rounded-full border border-text-primary object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full border border-text-primary bg-main/20 flex flex-col items-center justify-center text-main font-bold">
+                        {u.username[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-sm leading-tight text-text-primary truncate">{u.username}</h3>
+                      <p className="text-[10px] text-text-secondary mt-1">{u.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm font-bold text-text-secondary bg-gray-50 border-2 border-dashed border-gray-300">
+                フォローしているユーザーはいません。
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-8 w-full max-w-md shrink-0">
@@ -247,6 +297,10 @@ export default function MyPage() {
           </div>
         </div>
       </main>
+
+      {selectedUser && (
+        <UserModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+      )}
     </div>
   );
 }

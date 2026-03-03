@@ -25,6 +25,8 @@ export interface UserProfile {
   noteUrl?: string; // RSS取得用
   interests?: string[]; // 興味のあること
   transmissions?: string[]; // 発信したいこと
+  followingUsers?: string[]; // フォローしているユーザー (UID)
+  defaultTags?: string[]; // デフォルトで表示・選択するタグ
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
