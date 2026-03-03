@@ -265,7 +265,7 @@ export default function Home() {
             </aside>
 
             {/* Main Content Area - Vertical Scroll with Snap (Mobile) / Normal Flow (PC) */}
-            <main className="flex-1 h-full overflow-y-auto scroll-smooth snap-y snap-mandatory md:snap-none hide-scrollbar pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 relative">
+            <main className="flex-1 h-full overflow-y-auto scroll-smooth hide-scrollbar pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 relative">
 
                 {/* Tag Selector Bar (Sticky Top) */}
                 <div className="sticky top-0 z-40 bg-bg-main border-b-2 border-text-primary px-4 py-2 flex items-start justify-between">
@@ -378,7 +378,7 @@ export default function Home() {
 
 function Section({ id, title, children, showNextHint = true, showPrevHint = false }: { id: string, title: string, children: React.ReactNode, showNextHint?: boolean, showPrevHint?: boolean }) {
     return (
-        <section id={id} className="w-full h-full min-h-[500px] md:h-auto md:min-h-screen snap-start md:snap-align-none flex flex-col justify-start md:justify-center pt-28 pb-8 md:pt-12 md:pb-12 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
+        <section id={id} className="w-full min-h-dvh md:h-auto md:min-h-screen flex flex-col justify-start md:justify-center pt-28 pb-8 md:pt-12 md:pb-12 border-b-2 border-text-primary/10 relative shrink-0 box-border scroll-mt-0">
             {/* Previous Hint */}
             {showPrevHint && (
                 <div className="absolute top-22 left-1/2 -translate-x-1/2 flex flex-col items-center opacity-40 md:hidden z-20">

@@ -11,7 +11,7 @@ export default function Header({ alwaysShowOnDesktop = false }: { alwaysShowOnDe
 
     return (
         <>
-            <header className={`relative w-full h-14 box-content bg-white border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 shadow-sm pt-[env(safe-area-inset-top)] shrink-0 ${alwaysShowOnDesktop ? '' : 'md:hidden'}`}>
+            <header className={`relative w-full h-14 box-border bg-white border-b-2 border-text-primary/10 z-50 flex justify-between items-center px-4 shadow-sm pt-[env(safe-area-inset-top)] shrink-0 ${alwaysShowOnDesktop ? '' : 'md:hidden'}`}>
                 <button
                     type="button"
                     onClick={() => setIsOpen(true)}
