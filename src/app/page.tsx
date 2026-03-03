@@ -280,9 +280,8 @@ export default function Home() {
                             <button
                                 key={tag}
                                 onClick={() => setSelectedTag(tag)}
-                                className={`shrink-0 px-4 py-1 text-sm font-bold border-2 border-text-primary snap-start transition-colors flex items-center gap-1 ${selectedTag === tag ? 'bg-main text-white' : 'bg-white text-text-primary hover:bg-gray-100'}`}
+                                className={`shrink-0 px-2 py-1 text-sm font-bold border-2 border-text-primary snap-start transition-colors flex items-center gap-1 ${selectedTag === tag ? 'bg-main text-white' : 'bg-white text-text-primary hover:bg-gray-100'}`}
                             >
-                                <span>{TAG_EMOJIS[tag]}</span>
                                 <span>{tag}</span>
                             </button>
                         ))}
