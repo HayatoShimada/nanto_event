@@ -161,7 +161,8 @@ export default function Home() {
             setLoadingEvents(true);
             try {
                 const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(200)));
-                let fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
+                let fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType))
+                    .filter(e => e.status !== "draft" && (!e.publishedAt || e.publishedAt.toDate() <= new Date()));
 
                 if (selectedTag !== "ALL") {
                     fetchedEvents = fetchedEvents.filter(e => e.tags && e.tags.includes(selectedTag));

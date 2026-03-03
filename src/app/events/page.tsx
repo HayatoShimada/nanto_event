@@ -22,7 +22,8 @@ export default function EventsPage() {
             try {
                 // Fetch a large number of events for the "View All" page
                 const snap = await getDocs(query(collection(db, "events"), orderBy("startDate", "asc"), limit(500)));
-                const fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType));
+                const fetchedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() } as EventType))
+                    .filter(e => e.status !== "draft" && (!e.publishedAt || e.publishedAt.toDate() <= new Date()));
                 setAllEvents(fetchedEvents);
             } catch (error) {
                 console.error("Failed to fetch events:", error);

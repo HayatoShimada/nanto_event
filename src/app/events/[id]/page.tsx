@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { getEvent, incrementPageViews } from "@/lib/firebase/firestore";
+import { getEvent, incrementPageViews, incrementParticipationClick } from "@/lib/firebase/firestore";
 import type { Event } from "@/types";
 import Header from "@/components/Header";
 import { format } from "date-fns";
@@ -102,6 +102,11 @@ export default function EventDetailsPage({ params }: { params: Promise<{ id: str
                                     href={event.recruitmentUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => {
+                                        requestAnimationFrame(() => {
+                                            if (event.id) incrementParticipationClick(event.id).catch(console.error);
+                                        });
+                                    }}
                                     className="bg-main text-white font-bold py-4 px-12 text-lg border-2 border-text-primary inline-block shadow-[4px_4px_0_0_rgba(51,51,51,1)] hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] hover:shadow-[2px_2px_0_0_rgba(51,51,51,1)] active:shadow-none transition-all"
                                 >
                                     JOIN EVENT / 参加申し込み
